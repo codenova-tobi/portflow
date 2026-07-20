@@ -1,0 +1,2829 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>Compound</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+:root{
+  --bg:#050608; --bg-elev:#0c0e11; --card:#101215; --card-hover:#16181c;
+  --border:#212327; --border-soft:#1a1c20;
+  --text:#eceef1; --text-dim:#767c87; --text-faint:#3d4149;
+  --green:#22c55e; --green-soft:rgba(34,197,94,0.1);
+  --red:#ef4444; --red-soft:rgba(239,68,68,0.1);
+  --blue:#60a5fa; --blue-soft:rgba(96,165,250,0.1);
+  --amber:#f59e0b;
+  --radius:16px; --radius-sm:12px; --nav-h:64px;
+}
+*{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+html,body{height:100%;}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); overscroll-behavior-y:none;}
+.num{font-family:'JetBrains Mono',monospace; font-variant-numeric:tabular-nums;}
+::-webkit-scrollbar{display:none;}
+.shell{max-width:480px; margin:0 auto; min-height:100vh; position:relative;}
+
+.topbar{position:sticky; top:0; z-index:20; display:flex; align-items:center; justify-content:space-between; padding:20px 20px 6px 20px; background:linear-gradient(180deg, var(--bg) 65%, rgba(5,6,8,0));}
+.topbar .greet{font-size:13px; color:var(--text-dim); font-weight:500;}
+.icon-btn{width:36px;height:36px; border-radius:11px; background:var(--card); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; color:var(--text-dim);}
+.icon-btn svg{width:17px;height:17px;}
+.back-btn{display:flex; align-items:center; gap:6px; color:var(--text-dim); font-size:14px; font-weight:600;}
+.back-btn svg{width:18px;height:18px;}
+
+.screen{display:none; padding:0 20px calc(var(--nav-h) + 30px) 20px; animation:fade .32s cubic-bezier(.16,1,.3,1);}
+.screen.active{display:block;}
+@keyframes fade{from{opacity:0; transform:translateY(8px) scale(.985);} to{opacity:1; transform:none;}}
+
+.hero{padding:10px 0 22px 0;}
+.hero-label{display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--text-dim); font-weight:500; margin-bottom:8px;}
+.live-dot{width:7px;height:7px; border-radius:50%; background:var(--green); position:relative;}
+.live-dot::after{content:''; position:absolute; inset:-4px; border-radius:50%; background:var(--green); opacity:.35; animation:pulse 2s ease-out infinite;}
+@keyframes pulse{0%{transform:scale(.6); opacity:.5;} 100%{transform:scale(2.3); opacity:0;}}
+.hero-value{font-size:40px; font-weight:800; letter-spacing:-0.02em; line-height:1.05;}
+.hero-row{display:flex; align-items:center; gap:14px; margin-top:10px; flex-wrap:wrap;}
+.hero-delta{display:flex; align-items:center; gap:5px; font-size:14px; font-weight:600;}
+.hero-delta.pos{color:var(--green);} .hero-delta.neg{color:var(--red);}
+.hero-delta svg{width:13px;height:13px;}
+.hero-sub{font-size:12.5px; color:var(--text-faint);}
+
+.chips{display:flex; gap:6px; margin:16px 0 10px 0; overflow-x:auto;}
+.chip{padding:7px 14px; border-radius:20px; font-size:12.5px; font-weight:600; background:transparent; color:var(--text-faint); border:1px solid var(--border-soft); cursor:pointer; white-space:nowrap;}
+.chip.active{background:var(--card); color:var(--text); border-color:var(--border);}
+
+.chart-box{height:150px;} .chart-box.tall{height:250px;} .chart-box.med{height:170px;}
+.btn{transition:transform .15s ease, filter .15s ease;} .btn:active{transform:scale(.97);}
+.chip{transition:transform .12s ease, background .15s ease, color .15s ease;} .chip:active{transform:scale(.94);}
+.nav-btn, .nav-fab, .icon-btn, .wl-btn, .why-btn{transition:transform .15s ease;} .nav-fab:active{transform:scale(.92);} .icon-btn:active, .wl-btn:active, .why-btn:active{transform:scale(.9);}
+.holding-row, .tx-row, .timeline-row, .wl-row, .milestone-row, .broker-card, .goal-card, .alert-row, .market-row, .region-country-row{animation:fade .3s ease;}
+.stream-cursor{display:inline-block; width:2px; background:var(--text-dim); animation:blink 1s step-start infinite; margin-left:1px;}
+@keyframes blink{50%{opacity:0;}}
+.card{background:var(--card); border:1px solid var(--border-soft); border-radius:var(--radius); padding:20px;}
+.card-tight{background:var(--card); border:1px solid var(--border-soft); border-radius:var(--radius); padding:14px 16px;}
+.section{margin-top:32px;}
+.section-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+.section-title{font-size:13px; font-weight:700; color:var(--text-dim); text-transform:uppercase; letter-spacing:.05em;}
+.link-sm{font-size:12.5px; color:var(--text-dim); font-weight:600;}
+
+/* Health ring */
+.health-card{display:flex; align-items:center; gap:16px; cursor:pointer;}
+.health-ring-wrap{position:relative; width:64px; height:64px; flex-shrink:0;}
+.health-ring-wrap svg{transform:rotate(-90deg);}
+.health-num{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:17px; font-weight:800;}
+.health-info .t{font-size:14.5px; font-weight:700;}
+.health-info .s{font-size:12px; color:var(--text-faint); margin-top:2px;}
+
+.mover-row{display:flex; gap:10px;}
+.mover-box{flex:1; background:var(--card); border:1px solid var(--border-soft); border-radius:var(--radius-sm); padding:13px;}
+.mover-box .l{font-size:11px; color:var(--text-faint); font-weight:600; text-transform:uppercase; letter-spacing:.03em; margin-bottom:6px;}
+.mover-box .n{font-size:13.5px; font-weight:700;}
+.mover-box .p{font-size:12.5px; font-weight:600; margin-top:2px;}
+.mover-box .p.pos{color:var(--green);} .mover-box .p.neg{color:var(--red);}
+
+.holding-row{display:flex; align-items:center; gap:12px; padding:14px 0; border-bottom:1px solid var(--border-soft); cursor:pointer;}
+.holding-row:last-child{border-bottom:none;}
+.holding-icon{width:38px;height:38px; border-radius:11px; background:var(--bg-elev); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:12.5px; font-weight:700; color:var(--text-dim); flex-shrink:0;}
+.holding-info{flex:1; min-width:0;}
+.holding-name{font-size:14.5px; font-weight:600;}
+.holding-sub{font-size:12px; color:var(--text-faint); margin-top:2px;}
+.holding-right{text-align:right; flex-shrink:0;}
+.holding-value{font-size:14px; font-weight:600;}
+.holding-change{font-size:12px; font-weight:600; margin-top:2px;}
+.holding-change.pos{color:var(--green);} .holding-change.neg{color:var(--red);}
+.risk-badge{font-size:10px; font-weight:700; padding:2px 7px; border-radius:6px; margin-top:5px; display:inline-block;}
+.risk-badge.low{color:var(--green); background:var(--green-soft);}
+.risk-badge.mid{color:var(--amber); background:rgba(245,158,11,0.12);}
+.risk-badge.high{color:var(--red); background:var(--red-soft);}
+.tx-kebab{width:26px;height:26px; display:flex; align-items:center; justify-content:center; color:var(--text-faint); flex-shrink:0; border-radius:8px;}
+.tx-kebab svg{width:15px;height:15px;}
+
+.insight-card{background:linear-gradient(135deg, var(--card), var(--bg-elev)); border:1px solid var(--border-soft); border-radius:var(--radius); padding:18px;}
+.insight-head{display:flex; align-items:center; gap:8px; font-size:11.5px; font-weight:700; color:var(--text-faint); text-transform:uppercase; letter-spacing:.05em; margin-bottom:10px;}
+.insight-head svg{width:14px;height:14px; color:var(--blue);}
+.insight-text{font-size:14px; line-height:1.55; color:#d8dbe0;}
+.insight-loading{display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-faint);}
+
+.bottomnav{position:fixed; bottom:0; left:0; right:0; z-index:30; max-width:480px; margin:0 auto; background:rgba(9,10,13,0.94); backdrop-filter:blur(16px); border-top:1px solid var(--border-soft); display:flex; align-items:center; justify-content:space-around; height:var(--nav-h); padding-bottom:env(safe-area-inset-bottom);}
+.nav-btn{display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--text-faint); font-size:10px; font-weight:600; flex:1; padding:8px 0;}
+.nav-btn svg{width:21px;height:21px;}
+.nav-btn.active{color:var(--text);}
+.nav-fab{width:50px;height:50px; border-radius:50%; background:var(--text); color:var(--bg); display:flex; align-items:center; justify-content:center; margin-top:-22px; box-shadow:0 6px 18px rgba(0,0,0,.5); flex-shrink:0;}
+.nav-fab svg{width:22px;height:22px; stroke-width:2.4;}
+
+.stat-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+.stat-box{background:var(--card); border:1px solid var(--border-soft); border-radius:var(--radius-sm); padding:14px;}
+.stat-box .l{font-size:11px; color:var(--text-faint); font-weight:600; text-transform:uppercase; letter-spacing:.04em; margin-bottom:5px;}
+.stat-box .v{font-size:16.5px; font-weight:700;}
+
+.breakdown-chips{display:flex; gap:6px; margin-bottom:14px; overflow-x:auto;}
+.scenario-card{background:var(--card); border:1px solid var(--border-soft); border-radius:var(--radius-sm); padding:15px; margin-bottom:10px; cursor:pointer;}
+.scenario-top{display:flex; justify-content:space-between; align-items:center;}
+.scenario-name{font-size:14px; font-weight:700;}
+.scenario-desc{font-size:12px; color:var(--text-faint); margin-top:3px;}
+.scenario-result{margin-top:10px; padding-top:10px; border-top:1px solid var(--border-soft); display:flex; justify-content:space-between; font-size:13px;}
+
+.empty{text-align:center; padding:50px 10px; color:var(--text-faint);}
+.empty svg{width:36px;height:36px; margin-bottom:12px; opacity:.5;}
+.empty p{font-size:13.5px;}
+
+.btn{display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:15px; border-radius:var(--radius-sm); font-size:14.5px; font-weight:700; border:none; cursor:pointer;}
+.btn-primary{background:var(--text); color:var(--bg);}
+.btn-outline{background:transparent; border:1px solid var(--border); color:var(--text);}
+.btn-ghost{background:var(--card); color:var(--text-dim); border:1px solid var(--border-soft);}
+.btn-sm{padding:10px; font-size:13px; width:auto;}
+.link-btn{background:none; border:none; color:var(--text-dim); font-size:13px; font-weight:600; text-decoration:underline; cursor:pointer; padding:6px 0;}
+
+.sheet-overlay{position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:100; display:none; align-items:flex-end; justify-content:center;}
+.sheet-overlay.active{display:flex;}
+.sheet{background:var(--bg-elev); width:100%; max-width:480px; border-radius:22px 22px 0 0; padding:10px 20px calc(24px + env(safe-area-inset-bottom)) 20px; max-height:90vh; overflow-y:auto; animation:sheetup .25s ease;}
+@keyframes sheetup{from{transform:translateY(100%);} to{transform:translateY(0);}}
+.sheet-handle{width:36px;height:4px; background:var(--border); border-radius:4px; margin:6px auto 16px auto;}
+.sheet-title{font-size:17px; font-weight:800; margin-bottom:16px;}
+
+.search-input-wrap{position:relative; margin-bottom:4px;}
+.search-input{width:100%; background:var(--card); border:1px solid var(--border); color:var(--text); padding:14px 14px 14px 42px; border-radius:var(--radius-sm); font-size:15px; outline:none;}
+.search-input:focus{border-color:#3d4149;}
+.search-icon{position:absolute; left:14px; top:50%; transform:translateY(-50%); width:18px;height:18px; color:var(--text-faint);}
+.suggestion-list{margin-top:8px;}
+.suggestion-row{display:flex; align-items:center; gap:12px; padding:12px 4px; border-bottom:1px solid var(--border-soft); cursor:pointer;}
+.suggestion-row:last-child{border-bottom:none;}
+.sugg-icon{width:36px;height:36px; border-radius:10px; background:var(--card); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:11.5px; font-weight:700; color:var(--text-dim); flex-shrink:0;}
+.sugg-info{flex:1; min-width:0;}
+.sugg-name{font-size:13.5px; font-weight:600;}
+.sugg-sub{font-size:11.5px; color:var(--text-faint); margin-top:1px;}
+.sugg-tag{font-size:10.5px; color:var(--text-faint); background:var(--card); border:1px solid var(--border); padding:3px 8px; border-radius:6px; flex-shrink:0;}
+
+.field{margin-bottom:13px;}
+.field label{display:block; font-size:12px; color:var(--text-dim); font-weight:600; margin-bottom:6px;}
+.field input, .field select{width:100%; background:var(--card); border:1px solid var(--border); color:var(--text); padding:12px 13px; border-radius:var(--radius-sm); font-size:14.5px; outline:none;}
+.field input:focus, .field select:focus{border-color:#3d4149;}
+.field-row{display:flex; gap:10px;} .field-row .field{flex:1;}
+.segmented{display:flex; background:var(--card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:3px; margin-bottom:14px;}
+.segmented button{flex:1; padding:9px; border:none; background:transparent; color:var(--text-faint); font-size:13px; font-weight:700; border-radius:8px;}
+.segmented button.active{background:var(--bg-elev); color:var(--text);}
+.segmented button.active.buy{color:var(--green);} .segmented button.active.sell{color:var(--red);}
+.details-toggle{font-size:13px; color:var(--text-dim); font-weight:600; padding:10px 0; cursor:pointer; display:flex; align-items:center; gap:6px;}
+.details-toggle svg{width:14px;height:14px; transition:transform .2s;}
+.details-toggle.open svg{transform:rotate(180deg);}
+.extra-fields{display:none;} .extra-fields.open{display:block;}
+.selected-asset-card{display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:13px; margin-bottom:16px;}
+.selected-asset-card .price{margin-left:auto; text-align:right; font-size:14px; font-weight:700;}
+.fetch-loading{display:flex; align-items:center; gap:8px; color:var(--text-faint); font-size:13px; padding:12px 0;}
+.spinner{width:16px;height:16px;border-radius:50%; border:2px solid var(--border); border-top-color:var(--text); animation:spin .8s linear infinite; flex-shrink:0;}
+.spinner.lg{width:26px;height:26px; border-width:2.5px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.toast{position:fixed; bottom:calc(var(--nav-h) + 14px); left:50%; transform:translateX(-50%); background:var(--card); border:1px solid var(--border); padding:11px 18px; border-radius:30px; font-size:13px; z-index:200; box-shadow:0 8px 24px rgba(0,0,0,.5);}
+.list-flat{display:flex; flex-direction:column;}
+
+.tx-row-wrap{position:relative; overflow:hidden; border-radius:var(--radius-sm); margin-bottom:8px;}
+.tx-actions{position:absolute; right:0; top:0; bottom:0; display:flex;}
+.tx-actions button{width:64px; border:none; color:#fff; font-size:11.5px; font-weight:700; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;}
+.tx-actions .edit{background:#3b3f46;} .tx-actions .del{background:var(--red);}
+.tx-actions svg{width:16px;height:16px;}
+.tx-row{display:flex; align-items:center; gap:12px; padding:13px; background:var(--card); border:1px solid var(--border-soft); border-radius:var(--radius-sm); position:relative; transition:transform .2s ease; touch-action:pan-y;}
+.tx-badge{width:34px;height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+.tx-badge.buy{background:var(--green-soft); color:var(--green);} .tx-badge.sell{background:var(--red-soft); color:var(--red);}
+.tx-badge svg{width:16px;height:16px;}
+.tx-info{flex:1; min-width:0;} .tx-name{font-size:13.5px; font-weight:600;} .tx-sub{font-size:11.5px; color:var(--text-faint); margin-top:2px;}
+.tx-amt{font-size:13.5px; font-weight:700; text-align:right;}
+.filter-chips{display:flex; gap:6px; margin-bottom:14px; overflow-x:auto;}
+
+.goal-card{margin-bottom:14px;}
+.goal-top{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;}
+.goal-name{font-weight:700; font-size:14px;}
+.progress-track{height:6px; border-radius:20px; background:var(--bg-elev); overflow:hidden; margin:8px 0;}
+.progress-fill{height:100%; border-radius:20px; background:var(--text);}
+.goal-meta{display:flex; justify-content:space-between; font-size:12px; color:var(--text-faint);}
+
+.milestone-row{display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--border-soft);}
+.milestone-row:last-child{border-bottom:none;}
+.milestone-dot{width:34px;height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+.milestone-dot.done{background:var(--green-soft); color:var(--green);}
+.milestone-dot.pending{background:var(--card); border:1px solid var(--border); color:var(--text-faint);}
+.milestone-dot svg{width:16px;height:16px;}
+.milestone-info .t{font-size:14px; font-weight:600;}
+.milestone-info .s{font-size:12px; color:var(--text-faint); margin-top:1px;}
+
+.period-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:8px;}
+.period-box{background:var(--card); border:1px solid var(--border-soft); border-radius:var(--radius-sm); padding:11px 8px; text-align:center;}
+.period-box .l{font-size:10px; color:var(--text-faint); font-weight:600; text-transform:uppercase; margin-bottom:5px;}
+.period-box .v{font-size:13px; font-weight:700;}
+.period-box .v.pos{color:var(--green);} .period-box .v.neg{color:var(--red);}
+
+.wl-row{display:flex; align-items:center; gap:12px; padding:13px 0; border-bottom:1px solid var(--border-soft);}
+.wl-row:last-child{border-bottom:none;}
+.wl-actions{display:flex; gap:6px; margin-left:8px;}
+.wl-btn{width:30px;height:30px; border-radius:8px; background:var(--bg-elev); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; color:var(--text-dim); flex-shrink:0;}
+.wl-btn svg{width:14px;height:14px;}
+
+.acc-item{border-bottom:1px solid var(--border-soft);}
+.acc-item:last-child{border-bottom:none;}
+.acc-item summary{list-style:none; cursor:pointer; padding:13px 2px; font-size:14px; font-weight:600; display:flex; justify-content:space-between; align-items:center;}
+.acc-item summary::-webkit-details-marker{display:none;}
+.acc-item summary::after{content:'+'; color:var(--text-faint); font-size:18px; font-weight:400;}
+.acc-item[open] summary::after{content:'–';}
+.acc-item p{font-size:13px; color:var(--text-dim); line-height:1.6; padding:0 2px 14px 2px;}
+
+.broker-card{background:var(--card); border:1px solid var(--border-soft); border-radius:var(--radius-sm); padding:15px; margin-bottom:10px;}
+.broker-top{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;}
+.broker-name{font-size:14.5px; font-weight:700;}
+.broker-tag{font-size:10.5px; color:var(--text-faint); background:var(--bg-elev); border:1px solid var(--border); padding:3px 8px; border-radius:6px;}
+.broker-row{display:flex; justify-content:space-between; font-size:12.5px; color:var(--text-dim); padding:4px 0; border-top:1px solid var(--border-soft); margin-top:6px;}
+.broker-link{display:inline-block; margin-top:10px; font-size:12.5px; font-weight:700; color:var(--text);}
+
+.alert-row{display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--border-soft);}
+.alert-row:last-child{border-bottom:none;}
+.alert-dot{width:8px;height:8px; border-radius:50%; flex-shrink:0;}
+.alert-dot.active{background:var(--blue);} .alert-dot.triggered{background:var(--green);}
+.alert-info .t{font-size:13.5px; font-weight:600;} .alert-info .s{font-size:11.5px; color:var(--text-faint); margin-top:1px;}
+
+.tax-year-card{background:var(--card); border:1px solid var(--border-soft); border-radius:var(--radius-sm); padding:15px; margin-bottom:10px;}
+.tax-year-title{font-size:14px; font-weight:700; margin-bottom:10px;}
+.tax-row{display:flex; justify-content:space-between; font-size:13px; color:var(--text-dim); padding:5px 0;}
+
+.why-btn{display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:50%; background:var(--card); border:1px solid var(--border); color:var(--text-faint); font-size:11px; font-weight:700; cursor:pointer; margin-left:6px; flex-shrink:0;}
+.why-btn:active{background:var(--card-hover);}
+
+.timeline-row{display:flex; gap:12px; padding:13px 0; border-bottom:1px solid var(--border-soft); position:relative;}
+.timeline-row:last-child{border-bottom:none;}
+.timeline-dot{width:32px;height:32px; border-radius:50%; background:var(--card); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; flex-shrink:0; color:var(--text-dim);}
+.timeline-dot svg{width:15px;height:15px;}
+.timeline-info .t{font-size:13.5px; font-weight:600;}
+.timeline-info .s{font-size:11.5px; color:var(--text-faint); margin-top:1px;}
+.timeline-info .d{font-size:10.5px; color:var(--text-faint); margin-top:3px;}
+
+.market-row{display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border-soft);}
+.market-row:last-child{border-bottom:none;}
+.market-status-dot{width:8px;height:8px; border-radius:50%; flex-shrink:0;}
+.market-status-dot.open{background:var(--green);} .market-status-dot.closed{background:var(--text-faint);}
+.market-name{font-size:13.5px; font-weight:600; flex:1;}
+.market-countdown{font-size:12px; color:var(--text-faint);}
+
+.region-bar-track{height:10px; border-radius:6px; background:var(--bg-elev); overflow:hidden; display:flex; margin-bottom:14px;}
+.region-country-row{display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border-soft); font-size:13px;}
+.region-country-row:last-child{border-bottom:none;}
+
+.wrapped-card{background:linear-gradient(160deg, var(--card), var(--bg-elev)); border:1px solid var(--border-soft); border-radius:var(--radius); padding:24px; margin-bottom:12px; text-align:center;}
+.wrapped-label{font-size:12px; color:var(--text-faint); font-weight:600; text-transform:uppercase; letter-spacing:.05em; margin-bottom:10px;}
+.wrapped-value{font-size:30px; font-weight:800; letter-spacing:-0.02em;}
+.wrapped-sub{font-size:12.5px; color:var(--text-dim); margin-top:8px;}
+
+.snapshot-preview{width:100%; border-radius:var(--radius-sm); border:1px solid var(--border-soft); margin-bottom:14px;}
+
+.heatmap{display:flex; flex-wrap:wrap; gap:4px;}
+.heatmap-tile{border-radius:8px; padding:10px 8px; display:flex; flex-direction:column; justify-content:space-between; min-height:64px; min-width:70px;}
+.heatmap-tile .n{font-size:11.5px; font-weight:700; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.4);}
+.heatmap-tile .p{font-size:12.5px; font-weight:800; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.4);}
+.risk-dist-track{height:14px; border-radius:8px; overflow:hidden; display:flex; margin-bottom:10px;}
+.risk-dist-legend{display:flex; gap:16px; font-size:11.5px; color:var(--text-dim);}
+.risk-dist-legend span{display:flex; align-items:center; gap:5px;}
+.risk-dist-legend .dot{width:8px;height:8px; border-radius:2px;}
+
+.section-disclosure{margin-top:32px;}
+.section-disclosure summary{list-style:none; cursor:pointer; display:flex; align-items:center; justify-content:space-between; padding:4px 2px 4px 2px;}
+.section-disclosure summary::-webkit-details-marker{display:none;}
+.section-disclosure .chevron{width:16px;height:16px; color:var(--text-faint); transition:transform .2s; flex-shrink:0;}
+.section-disclosure[open] .chevron{transform:rotate(180deg);}
+.section-disclosure .disclosure-body{margin-top:14px;}
+.onboarding-card{background:linear-gradient(160deg, var(--card), var(--bg-elev)); border:1px solid var(--border-soft); border-radius:var(--radius); padding:28px 22px; text-align:center;}
+.onboarding-card .icon{width:48px;height:48px; border-radius:14px; background:var(--bg-elev); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; margin:0 auto 16px auto; color:var(--text);}
+.onboarding-card .icon svg{width:22px;height:22px;}
+.onboarding-card h3{font-size:17px; font-weight:800; margin-bottom:8px;}
+.onboarding-card p{font-size:13.5px; color:var(--text-dim); line-height:1.6; margin-bottom:20px;}
+
+/* Chat */
+.chat-wrap{display:flex; flex-direction:column; min-height:calc(100vh - 260px);}
+.chat-messages{flex:1; display:flex; flex-direction:column; gap:12px; padding-bottom:10px;}
+.msg{max-width:85%; padding:13px 16px; border-radius:18px; font-size:14px; line-height:1.6; box-shadow:0 2px 10px rgba(0,0,0,0.15); animation:fade .25s ease;}
+.msg.user{align-self:flex-end; background:var(--text); color:var(--bg); border-bottom-right-radius:4px;}
+.msg.assistant{align-self:flex-start; background:var(--card); border:1px solid var(--border-soft); border-bottom-left-radius:4px; color:#d8dbe0;}
+.msg.assistant ul{padding-left:18px; margin-top:4px;}
+.chat-chips{display:flex; gap:8px; overflow-x:auto; padding:4px 0 14px 0;}
+.chat-chip{white-space:nowrap; padding:9px 14px; border-radius:20px; font-size:12.5px; font-weight:600; background:var(--card); border:1px solid var(--border-soft); color:var(--text-dim); cursor:pointer;}
+.chat-suggestions-bar{position:fixed; bottom:calc(var(--nav-h) + 61px); left:0; right:0; max-width:480px; margin:0 auto; background:var(--bg-elev); border-top:1px solid var(--border-soft); padding:10px 16px; display:flex; gap:8px; overflow-x:auto; scroll-snap-type:x proximity; -webkit-overflow-scrolling:touch;}
+.chat-suggestions-bar .chat-chip{scroll-snap-align:start;}
+.chat-input-bar{position:fixed; bottom:var(--nav-h); left:0; right:0; max-width:480px; margin:0 auto; background:var(--bg-elev); border-top:1px solid var(--border-soft); padding:10px 16px; display:flex; gap:8px; align-items:center;}
+.chat-input-bar input{flex:1; background:var(--card); border:1px solid var(--border); color:var(--text); padding:13px 16px; border-radius:24px; font-size:14.5px; outline:none; transition:border-color .15s ease;}
+.chat-input-bar input:focus{border-color:#3d4149;}
+.chat-send{width:40px;height:40px; border-radius:50%; background:var(--text); color:var(--bg); border:none; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+.chat-send svg{width:17px;height:17px;}
+</style>
+</head>
+<body>
+<div class="shell" id="shell">
+
+  <!-- HOME -->
+  <div class="screen active" id="screen-home">
+    <div class="topbar">
+      <div class="greet" id="home-greet">Portfolio</div>
+      <div style="display:flex; gap:8px;">
+        <div class="icon-btn" onclick="openSnapshotSheet()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+        <div class="icon-btn" onclick="refreshPrices(true)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg></div>
+      </div>
+    </div>
+    <div class="hero">
+      <div class="hero-label"><span class="live-dot"></span>Gesamtvermögen · CHF</div>
+      <div class="hero-value num" id="home-total">CHF 0.00</div>
+      <div class="hero-row">
+        <div class="hero-delta" id="home-delta"></div>
+        <div class="why-btn" onclick="explainWhy('today')">?</div>
+        <div class="hero-sub" id="home-sub"></div>
+      </div>
+    </div>
+
+    <div class="onboarding-card hidden" id="home-onboarding">
+      <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l4-6 3 3 5-8"/></svg></div>
+      <h3>Leg los mit deinem ersten Investment</h3>
+      <p>Füge eine Aktie, einen ETF, Krypto oder ein anderes Investment hinzu — die App übernimmt danach automatisch Kursverfolgung, Analysen und deinen persönlichen KI-Coach.</p>
+      <button class="btn btn-primary" onclick="openAddSheet('invest')">+ Erstes Investment hinzufügen</button>
+    </div>
+
+    <div id="home-main-content">
+      <div class="section" style="margin-top:24px;">
+        <div class="chips" id="tf-chips">
+          <div class="chip" data-tf="1">1T</div><div class="chip" data-tf="7">1W</div><div class="chip active" data-tf="30">1M</div>
+          <div class="chip" data-tf="90">3M</div><div class="chip" data-tf="182">6M</div><div class="chip" data-tf="365">1J</div><div class="chip" data-tf="all">Alle</div>
+        </div>
+        <div class="card"><div class="chart-box tall"><canvas id="chart-portfolio"></canvas></div></div>
+      </div>
+
+      <div class="section">
+        <div class="insight-card" id="insight-card">
+          <div class="insight-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4z"/></svg>Insight des Tages</div>
+          <div class="insight-loading"><div class="spinner"></div>Wird generiert…</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><div class="section-title">Marktstatus</div></div>
+        <div class="card" id="market-status-list"></div>
+      </div>
+
+      <div class="section">
+        <div class="card health-card" onclick="openSheet('sheet-health')">
+          <div class="health-ring-wrap"><svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="27" stroke="#1a1c20" stroke-width="7" fill="none"/><circle id="health-ring" cx="32" cy="32" r="27" stroke="#22c55e" stroke-width="7" fill="none" stroke-linecap="round" stroke-dasharray="169.6" stroke-dashoffset="169.6"/></svg><div class="health-num" id="health-num">–</div></div>
+          <div class="health-info"><div class="t">Portfolio Health Score</div><div class="s" id="health-sub">Tippen für Details</div></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><div class="section-title">Top Gewinner & Verlierer</div></div>
+        <div class="mover-row">
+          <div class="mover-box"><div class="l">Bester Mover</div><div class="n" id="mv-best-name">–</div><div class="p" id="mv-best-pct"></div></div>
+          <div class="mover-box"><div class="l">Schwächster Mover</div><div class="n" id="mv-worst-name">–</div><div class="p" id="mv-worst-pct"></div></div>
+        </div>
+      </div>
+
+      <div class="section" id="home-goals-section">
+        <div class="section-head"><div class="section-title">Ziele & Fortschritt</div><div class="link-sm" onclick="nav('more')">Alle ansehen</div></div>
+        <div id="home-goals-list"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><div class="section-title">Positionen</div><div class="link-sm" id="pos-count">0</div></div>
+        <div class="card" id="holdings-list"></div>
+      </div>
+
+      <details class="section-disclosure" id="home-details-disclosure">
+        <summary><div class="section-title">Weitere Details</div><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+        <div class="disclosure-body">
+          <div style="margin-bottom:10px;"><div class="section-title" style="margin-bottom:10px;">Entwicklung</div><div class="period-grid" id="period-grid"></div></div>
+          <div style="margin:20px 0 10px 0;"><div class="stat-grid">
+            <div class="stat-box"><div class="l">Investiert</div><div class="v num" id="ov-invested">–</div></div>
+            <div class="stat-box" style="cursor:pointer;" onclick="openProfileSheet()"><div class="l">Verfügbares Bargeld</div><div class="v num" id="ov-cash">–</div></div>
+            <div class="stat-box"><div class="l">Gesamtgewinn/-verlust</div><div class="v num" id="ov-gain">–</div></div>
+            <div class="stat-box"><div class="l">Gesamtrendite</div><div class="v num" id="ov-return">–</div></div>
+          </div></div>
+          <div style="margin-top:20px;"><div class="section-title" style="margin-bottom:10px;">Allokation</div><div class="card"><div class="chart-box med"><canvas id="chart-alloc"></canvas></div></div></div>
+        </div>
+      </details>
+
+      <div class="empty hidden" id="holdings-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3v18h18"/><path d="M7 15l4-6 3 3 5-8"/></svg>
+        <p>Noch keine Investments. Tippe auf +, um zu starten.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- DETAIL -->
+  <div class="screen" id="screen-detail">
+    <div class="topbar">
+      <div class="back-btn" onclick="goHome()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg>Zurück</div>
+      <div class="icon-btn" onclick="openSheet('sheet-detail-menu')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="19" r="1.4"/></svg></div>
+    </div>
+    <div style="text-align:center; padding:8px 0 4px 0;">
+      <div style="font-size:14px; color:var(--text-dim); font-weight:600;" id="detail-name">—</div>
+      <div style="font-size:32px; font-weight:800; margin-top:4px;" class="num" id="detail-value">CHF 0.00</div>
+      <div style="margin-top:6px; font-size:14px; font-weight:600;" id="detail-change"></div>
+    </div>
+    <div class="chips" id="detail-tf-chips" style="justify-content:center;">
+      <div class="chip" data-tf="1T">1T</div><div class="chip" data-tf="1W">1W</div><div class="chip active" data-tf="1M">1M</div>
+      <div class="chip" data-tf="6M">6M</div><div class="chip" data-tf="1J">1J</div><div class="chip" data-tf="5J">5J</div><div class="chip" data-tf="max">Max</div>
+    </div>
+    <div class="card" style="margin-top:6px; position:relative;">
+      <div class="chart-box"><canvas id="chart-detail"></canvas></div>
+      <div id="chart-loading-overlay" class="hidden" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(16,18,21,0.6); border-radius:var(--radius);"><div class="spinner lg"></div></div>
+    </div>
+    <div class="section">
+      <div class="period-grid" id="price-info-grid"></div>
+    </div>
+    <div class="section">
+      <div class="section-head"><div class="section-title">KI-Analyse</div><div class="link-sm" onclick="renderAssetAiAnalysis(true)">Aktualisieren</div></div>
+      <div class="insight-card" id="asset-insight-card"><div class="insight-loading"><div class="spinner"></div>Wird geladen…</div></div>
+    </div>
+    <div class="section">
+      <div class="stat-grid">
+        <div class="stat-box"><div class="l">Bestand</div><div class="v num" id="d-qty">0</div></div>
+        <div class="stat-box"><div class="l">Ø Einstand</div><div class="v num" id="d-avg">0</div></div>
+        <div class="stat-box"><div class="l">Unrealisiert</div><div class="v num" id="d-unreal">0</div></div>
+        <div class="stat-box"><div class="l">Realisiert</div><div class="v num" id="d-real">0</div></div>
+        <div class="stat-box" style="grid-column:1/-1; display:flex; align-items:center; justify-content:space-between;"><div class="l" style="margin-bottom:0;">Risiko-Einschätzung</div><div id="d-risk"></div></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-head"><div class="section-title">Dividenden</div><div class="link-sm" onclick="recordDividend(currentDetailId)">+ Erfassen</div></div>
+      <div class="card">
+        <div class="stat-grid">
+          <div class="stat-box"><div class="l">Erhalten</div><div class="v num" id="d-div-received">CHF 0.00</div></div>
+          <div class="stat-box"><div class="l">Erwartet p.a.</div><div class="v num" id="d-div-expected">CHF 0.00</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><div class="section-title">Preisalarme</div><div class="link-sm" onclick="createAlert(currentDetailId)">+ Neu</div></div>
+      <div class="card" id="detail-alerts-list"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><div class="section-title">Transaktionen</div></div>
+      <div id="detail-tx-list" class="list-flat"></div>
+    </div>
+    <div class="section"><button class="btn btn-primary" onclick="openTxSheet(currentDetailId)">+ Transaktion erfassen</button></div>
+  </div>
+
+  <!-- ANALYTICS -->
+  <div class="screen" id="screen-analytics">
+    <div class="topbar"><div class="greet">Analytics</div><div></div></div>
+    <div class="breakdown-chips" id="breakdown-chips">
+      <div class="chip active" data-b="category">Kategorie</div>
+      <div class="chip" data-b="sector">Branche</div>
+      <div class="chip" data-b="country">Land</div>
+      <div class="chip" data-b="currency">Währung</div>
+      <div class="chip" data-b="broker">Broker</div>
+    </div>
+    <div class="card"><div class="chart-box med"><canvas id="chart-breakdown"></canvas></div></div>
+
+    <div class="section">
+      <div class="stat-grid">
+        <div class="stat-box"><div class="l">Investiert</div><div class="v num" id="a-invested">–</div></div>
+        <div class="stat-box"><div class="l">Ges. Rendite</div><div class="v num" id="a-return">–</div></div>
+        <div class="stat-box"><div class="l">Realisiert</div><div class="v num" id="a-realized">–</div></div>
+        <div class="stat-box"><div class="l">Ø Dividende p.a.</div><div class="v num" id="a-div">–</div></div>
+        <div class="stat-box" style="grid-column:1/-1;"><div class="l">Dividenden erhalten (gesamt)</div><div class="v num" id="a-div-received">–</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><div class="section-title">Portfolio-Heatmap</div></div>
+      <div class="card"><div class="heatmap" id="portfolio-heatmap"></div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><div class="section-title">Diversifikationsanalyse</div><div class="why-btn" onclick="explainWhy('diversification')">?</div></div>
+      <div class="card" id="diversification-notes"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><div class="section-title">Risikoübersicht</div></div>
+      <div class="card">
+        <div class="risk-dist-track" id="risk-dist-track"></div>
+        <div class="risk-dist-legend" id="risk-dist-legend"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><div class="section-title">Top / Flop</div></div>
+      <div class="card"><div class="chart-box med"><canvas id="chart-topflop"></canvas></div></div>
+      <div class="card" id="topflop-list" style="margin-top:12px;"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><div class="section-title">Watchlist</div><div class="link-sm" onclick="openAddSheet('watchlist')">+ Hinzufügen</div></div>
+      <div class="card" id="watchlist-content"></div>
+    </div>
+
+    <details class="section-disclosure">
+      <summary><div class="section-title">Vertiefte Analysen</div><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="disclosure-body">
+        <div style="margin-bottom:24px;"><div class="section-head"><div class="section-title">Persönliche Insights</div></div><div class="card" id="personal-insights-list"></div></div>
+        <div style="margin-bottom:24px;"><div class="section-head"><div class="section-title">Regionen & Länder</div></div><div class="card" id="region-breakdown"></div></div>
+        <div style="margin-bottom:24px;"><div class="section-head"><div class="section-title">Investment-Verhalten</div></div><div class="card" id="behavior-analysis"></div></div>
+        <div style="margin-bottom:24px;"><div class="section-head"><div class="section-title">Vergleich mit dem Markt</div></div>
+          <div class="card">
+            <div class="chips" id="index-chips" style="margin:0 0 12px 0;">
+              <div class="chip active" data-idx="SMI">SMI</div><div class="chip" data-idx="S&P 500">S&P 500</div><div class="chip" data-idx="MSCI World">MSCI World</div>
+            </div>
+            <div id="index-compare-result"><button class="btn btn-ghost btn-sm" onclick="compareToIndex()">Vergleichen</button></div>
+          </div>
+        </div>
+        <div><div class="section-head"><div class="section-title">Portfolio-Stresstest</div></div><div id="scenario-list"></div></div>
+      </div>
+    </details>
+  </div>
+
+  <!-- COACH -->
+  <div class="screen" id="screen-coach">
+    <div class="topbar"><div class="greet">KI-Coach</div><div></div></div>
+    <details class="card section-disclosure" id="coach-profile-details" style="margin-top:0; margin-bottom:18px;">
+      <summary>
+        <div>
+          <div class="section-title" style="margin-bottom:3px;">Dein Profil & Empfehlung</div>
+          <div style="font-size:12px; color:var(--text-faint); font-weight:400;" id="coach-profile-mini">Tippen zum Öffnen</div>
+        </div>
+        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <div class="disclosure-body">
+        <div id="coach-profile-summary" style="font-size:13px; color:var(--text-dim); margin-bottom:14px; line-height:1.5;"></div>
+        <div style="display:flex; gap:10px;">
+          <button class="btn btn-primary" onclick="generateRecommendation()">Empfehlung erhalten</button>
+          <button class="btn btn-ghost btn-sm" onclick="openProfileSheet()">Bearbeiten</button>
+        </div>
+        <div id="recommendation-result"></div>
+      </div>
+    </details>
+    <div class="chat-wrap">
+      <div class="chat-messages" id="chat-messages"></div>
+    </div>
+    <div style="height:130px;"></div>
+    <div class="chat-suggestions-bar" id="chat-suggestions-bar"></div>
+    <div class="chat-input-bar">
+      <input id="chat-input" placeholder="Frag deinen Coach…" onkeydown="if(event.key==='Enter') sendChat();">
+      <button class="chat-send" onclick="sendChat()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+    </div>
+  </div>
+
+  <!-- MORE -->
+  <div class="screen" id="screen-more">
+    <div class="topbar"><div class="greet">Mehr</div><div></div></div>
+
+    <div class="section" style="margin-top:0;">
+      <div class="section-head"><div class="section-title">Ziel-Rechner</div><div class="link-sm" onclick="openGoalSheet()">+ Neu</div></div>
+      <div id="goals-list"></div>
+      <div class="empty hidden" id="goals-empty"><p>Noch keine Ziele festgelegt.</p></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><div class="section-title">Meilensteine</div></div>
+      <div class="card" id="milestones-list"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><div class="section-title">Aktivität</div></div>
+      <div class="filter-chips" id="hist-filters">
+        <div class="chip active" data-f="all">Alle</div><div class="chip" data-f="buy">Käufe</div><div class="chip" data-f="sell">Verkäufe</div>
+      </div>
+      <div id="history-list"></div>
+      <div class="empty hidden" id="history-empty"><p>Noch keine Transaktionen erfasst.</p></div>
+    </div>
+
+    <details class="section-disclosure">
+      <summary><div class="section-title">Mehr entdecken</div><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="disclosure-body">
+        <div style="margin-bottom:24px;"><div class="section-head"><div class="section-title">Timeline</div></div><div class="card" id="timeline-list"></div></div>
+
+        <div style="margin-bottom:24px;"><div class="section-head"><div class="section-title">Jahresrückblick</div></div>
+          <div class="card" style="display:flex; align-items:center; justify-content:space-between; cursor:pointer;" onclick="openWrappedSheet()">
+            <div style="font-size:13.5px; color:var(--text-dim);">Dein persönlicher Investment-Rückblick</div>
+            <div class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:24px;"><div class="section-head"><div class="section-title">Preisalarme</div></div><div class="card" id="alerts-overview-list"></div></div>
+
+        <div style="margin-bottom:24px;"><div class="section-head"><div class="section-title">Steuerübersicht</div></div>
+          <div id="tax-overview"></div>
+          <p style="font-size:11.5px; color:var(--text-faint); margin-top:8px;">Keine Steuerberatung — nur eine Zusammenfassung deiner erfassten Daten.</p>
+        </div>
+
+        <div style="margin-bottom:24px;"><div class="section-head"><div class="section-title">Investment-Lexikon</div></div><div class="card" id="lexikon-list"></div></div>
+
+        <div><div class="section-head"><div class="section-title">Broker-Verzeichnis</div></div>
+          <div class="chips" id="broker-country-chips">
+            <div class="chip active" data-country="Schweiz">Schweiz</div><div class="chip" data-country="Deutschland">Deutschland</div><div class="chip" data-country="Österreich">Österreich</div>
+          </div>
+          <div id="broker-list"></div>
+        </div>
+      </div>
+    </details>
+
+    <div class="section">
+      <div class="section-title" style="margin-bottom:10px;">Daten</div>
+      <div class="card" style="display:flex; flex-direction:column; gap:10px;">
+        <button class="btn btn-ghost" onclick="exportJSON()">JSON exportieren</button>
+        <button class="btn btn-ghost" onclick="exportCSV()">CSV exportieren</button>
+        <input type="file" id="import-file" accept=".json" style="display:none" onchange="handleImport(event)">
+        <button class="btn btn-ghost" onclick="document.getElementById('import-file').click()">JSON importieren</button>
+      </div>
+    </div>
+    <div class="section" style="color:var(--text-faint); font-size:12px; text-align:center; padding-top:6px;" id="last-refresh">Alle Daten lokal gespeichert · Compound</div>
+  </div>
+
+  <div class="bottomnav">
+    <div class="nav-btn active" data-screen="home" onclick="nav('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Home</div>
+    <div class="nav-btn" data-screen="analytics" onclick="nav('analytics')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>Analytics</div>
+    <div class="nav-fab" onclick="openAddSheet()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg></div>
+    <div class="nav-btn" data-screen="coach" onclick="nav('coach')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4z"/></svg>Coach</div>
+    <div class="nav-btn" data-screen="more" onclick="nav('more')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>Mehr</div>
+  </div>
+</div>
+
+<!-- SHEET: Add asset (search) -->
+<div class="sheet-overlay" id="sheet-add" onclick="if(event.target===this) closeSheet('sheet-add')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Investment hinzufügen</div>
+    <div class="search-input-wrap">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input class="search-input" id="asset-search" placeholder="Apple, BTC, S&P 500…" oninput="renderSuggestions()" autocomplete="off">
+    </div>
+    <div class="suggestion-list" id="suggestion-list"></div>
+    <div style="text-align:center; margin-top:10px;">
+      <button type="button" class="link-btn" onclick="closeSheet('sheet-add'); openManualSheet();">Nicht gefunden? Manuell hinzufügen</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHEET: Confirm asset + quick fields -->
+<div class="sheet-overlay" id="sheet-confirm" onclick="if(event.target===this) closeSheet('sheet-confirm')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Position hinzufügen</div>
+    <div id="confirm-asset-card"></div>
+    <div id="confirm-risk-info"></div>
+    <form onsubmit="return saveQuickInvestment(event)">
+      <div class="field-row">
+        <div class="field"><label>Kaufpreis / Stk.</label><input id="q-price" type="number" step="any" required></div>
+        <div class="field"><label>Stückzahl</label><input id="q-qty" type="number" step="any" required></div>
+      </div>
+      <div class="field"><label>Kaufdatum</label><input id="q-date" type="date" required></div>
+      <div class="details-toggle" id="q-toggle" onclick="toggleExtra('q')">Mehr Details (Gebühren, Broker, Branche, Land, Dividende) <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>
+      <div class="extra-fields" id="q-extra">
+        <div class="field-row">
+          <div class="field"><label>Gebühren</label><input id="q-fees" type="number" step="any" value="0"></div>
+          <div class="field"><label>Broker</label><input id="q-broker" placeholder="z.B. IBKR"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Branche</label><input id="q-sector" placeholder="z.B. Technologie" list="sector-list"></div>
+          <div class="field"><label>Land</label><input id="q-country" placeholder="z.B. USA" list="country-list"></div>
+        </div>
+        <div class="field"><label>Dividendenrendite % p.a.</label><input id="q-div" type="number" step="any" value="0"></div>
+      </div>
+      <button type="submit" class="btn btn-primary" style="margin-top:8px;">Hinzufügen</button>
+    </form>
+  </div>
+</div>
+
+<!-- SHEET: Manual add (fallback) -->
+<div class="sheet-overlay" id="sheet-manual" onclick="if(event.target===this) closeSheet('sheet-manual')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Manuell hinzufügen</div>
+    <form onsubmit="return saveManualInvestment(event)">
+      <div class="field"><label>Name</label><input id="m-name" required placeholder="z.B. Eigentumswohnung"></div>
+      <div class="field-row">
+        <div class="field"><label>Symbol (optional)</label><input id="m-symbol"></div>
+        <div class="field"><label>Kategorie</label>
+          <select id="m-category"><option>Aktie</option><option>ETF</option><option>Krypto</option><option>Fonds</option><option>Anleihe</option><option>Edelmetall</option><option>Rohstoff</option><option>REIT</option><option>Index</option><option>Cash</option><option>Immobilie</option><option>Sonstige</option></select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Broker</label><input id="m-broker" placeholder="z.B. UBS"></div>
+        <div class="field"><label>Währung</label><select id="m-currency"><option>CHF</option><option>EUR</option><option>USD</option><option>GBP</option></select></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Kaufpreis / Stk.</label><input id="m-price" type="number" step="any" required></div>
+        <div class="field"><label>Menge</label><input id="m-qty" type="number" step="any" required></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Datum</label><input id="m-date" type="date" required></div>
+        <div class="field"><label>Gebühren</label><input id="m-fees" type="number" step="any" value="0"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Branche</label><input id="m-sector" placeholder="optional" list="sector-list"></div>
+        <div class="field"><label>Land</label><input id="m-country" placeholder="optional" list="country-list"></div>
+      </div>
+      <div class="field"><label>Dividendenrendite % p.a.</label><input id="m-div" type="number" step="any" value="0"></div>
+      <button type="submit" class="btn btn-primary" style="margin-top:6px;">Speichern</button>
+    </form>
+  </div>
+</div>
+
+<datalist id="sector-list"><option>Technologie</option><option>Finanzen</option><option>Gesundheit</option><option>Konsum</option><option>Industrie</option><option>Energie</option><option>Immobilien</option><option>Rohstoffe</option><option>Telekommunikation</option></datalist>
+<datalist id="country-list"><option>Schweiz</option><option>USA</option><option>Deutschland</option><option>Frankreich</option><option>Global</option><option>Grossbritannien</option><option>Japan</option><option>China</option></datalist>
+
+<!-- SHEET: Transaction -->
+<div class="sheet-overlay" id="sheet-tx" onclick="if(event.target===this) closeSheet('sheet-tx')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="tx-sheet-title">Transaktion</div>
+    <div class="segmented"><button type="button" class="active buy" data-type="buy" onclick="setTxType('buy')">Kauf</button><button type="button" class="sell" data-type="sell" onclick="setTxType('sell')">Verkauf</button></div>
+    <form onsubmit="return saveTransaction(event)">
+      <input type="hidden" id="tx-inv-id"><input type="hidden" id="tx-id"><input type="hidden" id="tx-type" value="buy">
+      <div class="field-row"><div class="field"><label>Preis / Stk.</label><input id="tx-price" type="number" step="any" required></div><div class="field"><label>Menge</label><input id="tx-qty" type="number" step="any" required></div></div>
+      <div class="field-row"><div class="field"><label>Datum</label><input id="tx-date" type="date" required></div><div class="field"><label>Gebühren</label><input id="tx-fees" type="number" step="any" value="0"></div></div>
+      <div class="field"><label>Aktueller Kurs (optional aktualisieren)</label><input id="tx-currentprice" type="number" step="any" placeholder="unverändert lassen"></div>
+      <button type="submit" class="btn btn-primary" style="margin-top:6px;">Speichern</button>
+    </form>
+  </div>
+</div>
+
+<!-- SHEET: Goal -->
+<div class="sheet-overlay" id="sheet-goal" onclick="if(event.target===this) closeSheet('sheet-goal')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Ziel & Sparplan</div>
+    <div class="chips" id="goal-suggestion-chips" style="margin:0 0 14px 0;"></div>
+    <form onsubmit="return saveGoal(event)">
+      <div class="field"><label>Bezeichnung</label><input id="g-name" required placeholder="z.B. 1 Mio. CHF Vermögen"></div>
+      <div class="field"><label>Zielwert (CHF)</label><input id="g-target" type="number" step="any" required></div>
+      <div class="field-row">
+        <div class="field"><label>Monatliche Sparrate (CHF)</label><input id="g-monthly" type="number" step="any" value="0"></div>
+        <div class="field"><label>Erw. Rendite % p.a.</label><input id="g-return" type="number" step="any" value="6"></div>
+      </div>
+      <button type="submit" class="btn btn-primary" style="margin-top:6px;">Speichern</button>
+    </form>
+  </div>
+</div>
+
+<!-- SHEET: detail menu -->
+<div class="sheet-overlay" id="sheet-detail-menu" onclick="if(event.target===this) closeSheet('sheet-detail-menu')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Position bearbeiten</div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <button class="btn btn-ghost" onclick="closeSheet('sheet-detail-menu'); editCurrentPrice();">Kurs manuell aktualisieren</button>
+      <button class="btn btn-ghost" onclick="closeSheet('sheet-detail-menu'); refreshSinglePrice();">Kurs per Websuche abrufen</button>
+      <button class="btn btn-ghost" style="color:var(--red);" onclick="deleteCurrentInvestment()">Investment löschen</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHEET: Health breakdown -->
+<div class="sheet-overlay" id="sheet-health" onclick="if(event.target===this) closeSheet('sheet-health')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Health Score im Detail</div>
+    <div id="health-detail"></div>
+  </div>
+</div>
+
+<!-- SHEET: Investment profile -->
+<div class="sheet-overlay" id="sheet-profile" onclick="if(event.target===this) closeSheet('sheet-profile')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Dein Investment-Profil</div>
+    <form onsubmit="return saveProfile(event)">
+      <div class="field"><label>Verfügbares Vermögen (CHF)</label><input id="p-capital" type="number" step="any" placeholder="0"></div>
+      <div class="field"><label>Risikobereitschaft</label>
+        <div class="segmented">
+          <button type="button" data-risk="konservativ" onclick="setProfileRisk('konservativ')">Konservativ</button>
+          <button type="button" class="active" data-risk="ausgewogen" onclick="setProfileRisk('ausgewogen')">Ausgewogen</button>
+          <button type="button" data-risk="offensiv" onclick="setProfileRisk('offensiv')">Offensiv</button>
+        </div>
+      </div>
+      <input type="hidden" id="p-risk" value="ausgewogen">
+      <div class="field"><label>Anlageziel</label>
+        <select id="p-goal"><option>Vermögensaufbau</option><option>Altersvorsorge</option><option>Kurzfristig sparen</option></select>
+      </div>
+      <button type="submit" class="btn btn-primary" style="margin-top:6px;">Speichern</button>
+    </form>
+  </div>
+</div>
+
+<!-- SHEET: custom confirm dialog (replaces native confirm(), which is blocked in sandboxed artifacts) -->
+<div class="sheet-overlay" id="sheet-confirm-dialog">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="confirm-dialog-title">Bist du sicher?</div>
+    <p id="confirm-dialog-message" style="font-size:13.5px; color:var(--text-dim); line-height:1.6; margin-bottom:20px;"></p>
+    <div style="display:flex; gap:10px;">
+      <button class="btn btn-ghost" onclick="resolveConfirmDialog(false)">Abbrechen</button>
+      <button class="btn btn-primary" id="confirm-dialog-ok" style="background:var(--red); color:#fff;" onclick="resolveConfirmDialog(true)">Löschen</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHEET: custom prompt dialog (replaces native prompt(), which is blocked in sandboxed artifacts) -->
+<div class="sheet-overlay" id="sheet-prompt-dialog">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="prompt-dialog-title">Eingabe</div>
+    <div class="field"><input id="prompt-dialog-input" type="text" onkeydown="if(event.key==='Enter') resolvePromptDialogFromInput();"></div>
+    <div style="display:flex; gap:10px; margin-top:6px;">
+      <button class="btn btn-ghost" onclick="resolvePromptDialog(null)">Abbrechen</button>
+      <button class="btn btn-primary" onclick="resolvePromptDialogFromInput()">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHEET: tx quick menu -->
+<div class="sheet-overlay" id="sheet-tx-menu" onclick="if(event.target===this) closeSheet('sheet-tx-menu')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Transaktion</div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <button class="btn btn-ghost" onclick="txMenuEdit()">Bearbeiten</button>
+      <button class="btn btn-ghost" style="color:var(--red);" onclick="txMenuDelete()">Löschen</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHEET: Warum-Erklärung -->
+<div class="sheet-overlay" id="sheet-why" onclick="if(event.target===this) closeSheet('sheet-why')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="why-title">Warum?</div>
+    <div id="why-content"><div class="insight-loading"><div class="spinner"></div>Wird analysiert…</div></div>
+  </div>
+</div>
+
+<!-- SHEET: Jahresrückblick -->
+<div class="sheet-overlay" id="sheet-wrapped" onclick="if(event.target===this) closeSheet('sheet-wrapped')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Jahresrückblick</div>
+    <div class="chips" id="wrapped-year-chips" style="margin-bottom:16px;"></div>
+    <div id="wrapped-content"></div>
+  </div>
+</div>
+
+<!-- SHEET: Portfolio-Snapshot -->
+<div class="sheet-overlay" id="sheet-snapshot" onclick="if(event.target===this) closeSheet('sheet-snapshot')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Portfolio-Snapshot</div>
+    <canvas id="snapshot-canvas" width="1080" height="1350" style="display:none;"></canvas>
+    <img id="snapshot-img" class="snapshot-preview" alt="Portfolio Snapshot">
+    <div style="display:flex; gap:10px;">
+      <button class="btn btn-ghost" onclick="downloadSnapshot()">Herunterladen</button>
+      <button class="btn btn-primary" id="snapshot-share-btn" onclick="shareSnapshot()">Teilen</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============ CONFIG ============ */
+const FX_TO_CHF = {CHF:1, EUR:0.96, USD:0.88, GBP:1.12};
+const CHART_COLORS = ['#eceef1','#7d8590','#4d525c','#c9cdd3','#5c6068','#9aa0a8','#33363c','#b4b8bd','#60a5fa','#f59e0b'];
+const MILESTONE_THRESHOLDS = [10000,25000,50000,100000,250000,500000,1000000];
+const ASSET_DB = [
+  {symbol:'AAPL', name:'Apple Inc.', exchange:'NASDAQ', category:'Aktie', currency:'USD', price:195},
+  {symbol:'MSFT', name:'Microsoft Corp.', exchange:'NASDAQ', category:'Aktie', currency:'USD', price:420},
+  {symbol:'GOOGL', name:'Alphabet Inc.', exchange:'NASDAQ', category:'Aktie', currency:'USD', price:165},
+  {symbol:'AMZN', name:'Amazon.com Inc.', exchange:'NASDAQ', category:'Aktie', currency:'USD', price:185},
+  {symbol:'TSLA', name:'Tesla Inc.', exchange:'NASDAQ', category:'Aktie', currency:'USD', price:250},
+  {symbol:'NVDA', name:'NVIDIA Corp.', exchange:'NASDAQ', category:'Aktie', currency:'USD', price:135},
+  {symbol:'META', name:'Meta Platforms', exchange:'NASDAQ', category:'Aktie', currency:'USD', price:480},
+  {symbol:'NFLX', name:'Netflix Inc.', exchange:'NASDAQ', category:'Aktie', currency:'USD', price:650},
+  {symbol:'DIS', name:'Walt Disney Co.', exchange:'NYSE', category:'Aktie', currency:'USD', price:105},
+  {symbol:'KO', name:'Coca-Cola Co.', exchange:'NYSE', category:'Aktie', currency:'USD', price:63},
+  {symbol:'JPM', name:'JPMorgan Chase', exchange:'NYSE', category:'Aktie', currency:'USD', price:200},
+  {symbol:'V', name:'Visa Inc.', exchange:'NYSE', category:'Aktie', currency:'USD', price:275},
+  {symbol:'NKE', name:'Nike Inc.', exchange:'NYSE', category:'Aktie', currency:'USD', price:78},
+  {symbol:'ADBE', name:'Adobe Inc.', exchange:'NASDAQ', category:'Aktie', currency:'USD', price:520},
+  {symbol:'AMD', name:'Advanced Micro Devices', exchange:'NASDAQ', category:'Aktie', currency:'USD', price:150},
+  {symbol:'ORCL', name:'Oracle Corp.', exchange:'NYSE', category:'Aktie', currency:'USD', price:145},
+  {symbol:'NESN', name:'Nestlé SA', exchange:'SIX', category:'Aktie', currency:'CHF', price:88},
+  {symbol:'NOVN', name:'Novartis AG', exchange:'SIX', category:'Aktie', currency:'CHF', price:95},
+  {symbol:'ROG', name:'Roche Holding', exchange:'SIX', category:'Aktie', currency:'CHF', price:260},
+  {symbol:'UBSG', name:'UBS Group AG', exchange:'SIX', category:'Aktie', currency:'CHF', price:27},
+  {symbol:'ZURN', name:'Zurich Insurance', exchange:'SIX', category:'Aktie', currency:'CHF', price:480},
+  {symbol:'ABBN', name:'ABB Ltd', exchange:'SIX', category:'Aktie', currency:'CHF', price:48},
+  {symbol:'SREN', name:'Swiss Re AG', exchange:'SIX', category:'Aktie', currency:'CHF', price:105},
+  {symbol:'SPY', name:'SPDR S&P 500 ETF', exchange:'NYSE Arca', category:'ETF', currency:'USD', price:560},
+  {symbol:'VOO', name:'Vanguard S&P 500 ETF', exchange:'NYSE Arca', category:'ETF', currency:'USD', price:515},
+  {symbol:'QQQ', name:'Invesco QQQ Trust', exchange:'NASDAQ', category:'ETF', currency:'USD', price:490},
+  {symbol:'VTI', name:'Vanguard Total Stock Market', exchange:'NYSE Arca', category:'ETF', currency:'USD', price:270},
+  {symbol:'VWRL', name:'Vanguard FTSE All-World', exchange:'SIX', category:'ETF', currency:'CHF', price:112},
+  {symbol:'IWDA', name:'iShares Core MSCI World', exchange:'LSE', category:'ETF', currency:'USD', price:95},
+  {symbol:'EIMI', name:'iShares Core MSCI EM', exchange:'LSE', category:'ETF', currency:'USD', price:32},
+  {symbol:'GLD', name:'SPDR Gold Shares', exchange:'NYSE Arca', category:'Edelmetall', currency:'USD', price:225},
+  {symbol:'SLV', name:'iShares Silver Trust', exchange:'NYSE Arca', category:'Edelmetall', currency:'USD', price:27},
+  {symbol:'BTC', name:'Bitcoin', exchange:'Krypto', category:'Krypto', currency:'USD', price:62000},
+  {symbol:'ETH', name:'Ethereum', exchange:'Krypto', category:'Krypto', currency:'USD', price:3400},
+  {symbol:'SOL', name:'Solana', exchange:'Krypto', category:'Krypto', currency:'USD', price:145},
+  {symbol:'XRP', name:'Ripple', exchange:'Krypto', category:'Krypto', currency:'USD', price:0.55},
+  {symbol:'ADA', name:'Cardano', exchange:'Krypto', category:'Krypto', currency:'USD', price:0.45},
+  {symbol:'DOGE', name:'Dogecoin', exchange:'Krypto', category:'Krypto', currency:'USD', price:0.15},
+  {symbol:'^GSPC', name:'S&P 500 Index', exchange:'Index', category:'Index', currency:'USD', price:5500},
+  {symbol:'^NDX', name:'Nasdaq 100 Index', exchange:'Index', category:'Index', currency:'USD', price:19500},
+];
+const STRESS_SCENARIOS = [
+  {id:'2008', name:'Finanzkrise 2008', desc:'Breiter Markteinbruch über alle Anlageklassen', shocks:{'Aktie':-45,'ETF':-40,'Fonds':-38,'Krypto':-70,'Anleihe':-5,'Edelmetall':10,'Rohstoff':-30,'REIT':-50,'Index':-40,'Cash':0,'Immobilie':-20,'Sonstige':-25}},
+  {id:'rates', name:'Starker Zinsanstieg', desc:'Zinssensitive Anlagen leiden am meisten', shocks:{'Aktie':-8,'ETF':-8,'Fonds':-8,'Krypto':-15,'Anleihe':-12,'Edelmetall':-5,'Rohstoff':-3,'REIT':-15,'Index':-8,'Cash':0,'Immobilie':-10,'Sonstige':-5}},
+  {id:'recession', name:'Rezession', desc:'Wirtschaftlicher Abschwung, Nachfrageeinbruch', shocks:{'Aktie':-25,'ETF':-22,'Fonds':-20,'Krypto':-35,'Anleihe':3,'Edelmetall':5,'Rohstoff':-15,'REIT':-20,'Index':-22,'Cash':0,'Immobilie':-12,'Sonstige':-15}},
+];
+const CATEGORY_INFO = {
+  'Aktie':{risk:'Mittel-Hoch', vol:'Historisch ~15-25% jährliche Schwankung, abhängig vom Einzeltitel.', chances:'Langfristig oft attraktive Rendite durch Kurswachstum und Dividenden.', risks:'Einzeltitelrisiko: Kursverluste bis Totalverlust bei Unternehmensproblemen möglich.', outlook:'Über 10+ Jahre historisch meist positiv, aber mit teils starken Schwankungen zwischendurch.'},
+  'ETF':{risk:'Mittel', vol:'Schwankung ähnlich dem zugrundeliegenden Markt, meist 10-20% p.a.', chances:'Breite Streuung reduziert Einzelrisiko bei Marktrendite.', risks:'Folgt dem Markt auch nach unten; kein Schutz vor breiten Krisen.', outlook:'Für langfristigen, passiven Vermögensaufbau historisch gut geeignet.'},
+  'Krypto':{risk:'Hoch', vol:'Sehr hohe Schwankung, 50-80% p.a. sind keine Seltenheit.', chances:'Hohes Wachstumspotenzial bei neuen Technologien/Netzwerken.', risks:'Regulatorische Unsicherheit, hohe Volatilität, teils Totalverlustrisiko.', outlook:'Langfristig sehr unsicher, sollte nur einen kleinen Portfolioanteil ausmachen.'},
+  'Fonds':{risk:'Mittel', vol:'Abhängig von Strategie, meist 10-20% p.a.', chances:'Professionelles Management, oft breite Diversifikation.', risks:'Verwaltungsgebühren schmälern die Rendite über Zeit.', outlook:'Solide Option, aber Gebühren im Blick behalten.'},
+  'Anleihe':{risk:'Niedrig', vol:'Meist unter 5-8% p.a., zinssensitiv.', chances:'Stabile, planbare Erträge und geringere Schwankung als Aktien.', risks:'Zinsänderungsrisiko und Bonitätsrisiko des Emittenten.', outlook:'Guter Stabilisator im Portfolio, aber begrenztes Renditepotenzial.'},
+  'Edelmetall':{risk:'Niedrig-Mittel', vol:'Meist 10-15% p.a., gilt als "sicherer Hafen".', chances:'Schutz gegen Inflation und Krisenzeiten.', risks:'Kein laufender Ertrag (keine Dividende/Zins), Kursschwankungen möglich.', outlook:'Sinnvolle Beimischung zur Diversifikation, nicht als Kerninvestment.'},
+  'Rohstoff':{risk:'Mittel-Hoch', vol:'Stark schwankend, abhängig von Angebot/Nachfrage, 20-30% p.a.', chances:'Diversifikation, Inflationsschutz.', risks:'Zyklisch, schwer prognostizierbar, keine laufenden Erträge.', outlook:'Eher taktische Beimischung als Kerninvestment.'},
+  'REIT':{risk:'Mittel', vol:'10-20% p.a., zinssensitiv wie Immobilien.', chances:'Immobilien-Exposure ohne Direktkauf, oft attraktive Ausschüttungen.', risks:'Reagiert empfindlich auf Zinsänderungen.', outlook:'Gute Ergänzung für Einkommensfokus im Portfolio.'},
+  'Index':{risk:'Mittel', vol:'Ähnlich breiten Aktienmärkten, 10-20% p.a.', chances:'Marktrendite ohne Einzeltitelrisiko.', risks:'Folgt dem Gesamtmarkt auch bei Abschwüngen.', outlook:'Solide Basis für langfristigen Vermögensaufbau.'},
+  'Cash':{risk:'Niedrig', vol:'Kaum Schwankung, aber Kaufkraftverlust durch Inflation möglich.', chances:'Volle Liquidität und Sicherheit für kurzfristige Bedürfnisse.', risks:'Inflation frisst real die Kaufkraft über Zeit.', outlook:'Wichtig als Reserve, aber langfristig renditearm.'},
+  'Immobilie':{risk:'Mittel', vol:'Wertschwankungen meist geringer als Aktien, aber illiquide.', chances:'Stabile Werterhaltung und ggf. Mieteinnahmen.', risks:'Geringe Liquidität, hohe Kapitalbindung, Klumpenrisiko.', outlook:'Langfristig stabil, aber schwer kurzfristig anzupassen.'},
+  'Sonstige':{risk:'Mittel', vol:'Stark abhängig vom konkreten Investment.', chances:'Individuell zu bewerten.', risks:'Individuell zu bewerten, oft weniger transparent.', outlook:'Genauer prüfen, was genau dahintersteht.'}
+};
+const LEXIKON = [
+  {term:'ETF', def:'Ein Exchange Traded Fund bildet einen Index (z.B. den S&P 500) ab und wird wie eine Aktie an der Börse gehandelt. Er bietet breite Streuung zu niedrigen Kosten.'},
+  {term:'Dividende', def:'Ein Teil des Unternehmensgewinns, der regelmässig an die Aktionäre ausgeschüttet wird — meist quartals- oder jährlich.'},
+  {term:'Volatilität', def:'Ein Mass für die Schwankungsstärke eines Kurses. Hohe Volatilität bedeutet grosse und häufige Kursbewegungen, sowohl nach oben als auch unten.'},
+  {term:'Rendite', def:'Der prozentuale Gewinn oder Verlust eines Investments über einen bestimmten Zeitraum, meist pro Jahr angegeben.'},
+  {term:'Inflation', def:'Der allgemeine Anstieg der Preise über Zeit, wodurch Geld an Kaufkraft verliert. Investieren kann helfen, diesen Effekt langfristig auszugleichen.'},
+  {term:'Diversifikation', def:'Die Streuung von Kapital über verschiedene Anlagen, um das Risiko einzelner Positionen zu reduzieren.'},
+  {term:'Klumpenrisiko', def:'Das Risiko, das entsteht, wenn ein zu grosser Teil des Vermögens in einer einzelnen Position, Branche oder Region konzentriert ist.'},
+  {term:'Rebalancing', def:'Die regelmässige Anpassung des Portfolios zurück auf die gewünschte Ziel-Gewichtung, z.B. durch Nachkauf untergewichteter Positionen.'},
+  {term:'Durchschnittskosteneffekt', def:'Wer regelmässig einen festen Betrag investiert (z.B. per Sparplan), kauft automatisch mehr Anteile bei niedrigen und weniger bei hohen Kursen.'},
+  {term:'Liquidität', def:'Wie schnell und einfach ein Investment ohne grossen Wertverlust in Bargeld umgewandelt werden kann.'},
+  {term:'Marktkapitalisierung', def:'Der Gesamtwert eines börsennotierten Unternehmens, berechnet aus Aktienkurs mal Anzahl ausstehender Aktien.'},
+  {term:'Bruttorendite vs. Nettorendite', def:'Die Bruttorendite ist der Ertrag vor Kosten und Steuern, die Nettorendite danach — für die reale Wertentwicklung zählt Letztere.'}
+];
+const BROKERS_DB = {
+  'Schweiz':[
+    {name:'Swissquote', assets:'Aktien, ETFs, Krypto, Fonds', pros:'Grösste Schweizer Auswahl, FINMA-reguliert, guter Support', cons:'Höhere Gebühren als Neobroker', fees:'ab CHF 9 pro Trade', security:'FINMA-reguliert, Einlagensicherung', level:'Einsteiger bis Fortgeschritten', url:'https://www.swissquote.ch'},
+    {name:'Interactive Brokers', assets:'Aktien, ETFs, Optionen, Anleihen, Krypto', pros:'Sehr günstige Gebühren, riesiges Angebot, viele Börsenplätze', cons:'Komplexere Oberfläche für Einsteiger', fees:'ab USD 1 pro Trade', security:'SIPC-versichert (US), reguliert', level:'Fortgeschritten', url:'https://www.interactivebrokers.com'},
+    {name:'DEGIRO', assets:'Aktien, ETFs, Anleihen', pros:'Günstige ETF-Sparpläne, einfache App', cons:'Kein Krypto, Kundenservice ausbaufähig', fees:'ab CHF 2 pro Trade', security:'Reguliert durch niederländische AFM', level:'Einsteiger bis Fortgeschritten', url:'https://www.degiro.ch'},
+    {name:'PostFinance', assets:'Aktien, ETFs, Fonds', pros:'Vertraute Schweizer Bank, einfache Integration mit Konto', cons:'Höhere Gebühren, kleineres Angebot', fees:'ab CHF 29 pro Trade', security:'Schweizer Bank, Einlagensicherung', level:'Einsteiger', url:'https://www.postfinance.ch'},
+    {name:'Yuh', assets:'Aktien, ETFs, Krypto (Bruchstücke)', pros:'Sehr einfache App, ideal für kleine Beträge', cons:'Eingeschränktes Angebot, höhere Krypto-Spreads', fees:'ab CHF 1 pro Trade', security:'Von Swissquote & PostFinance getragen', level:'Einsteiger', url:'https://www.yuh.com'},
+  ],
+  'Deutschland':[
+    {name:'Trade Republic', assets:'Aktien, ETFs, Krypto, Sparpläne', pros:'Sehr günstig, einfache App, kostenlose Sparpläne', cons:'Eingeschränkter Kundenservice, kein Depotübertrag-Support für alles', fees:'EUR 1 pro Trade', security:'Deutsche Einlagensicherung', level:'Einsteiger', url:'https://www.traderepublic.com'},
+    {name:'Scalable Capital', assets:'Aktien, ETFs, Krypto, Sparpläne', pros:'Flatrate-Modelle verfügbar, breites Angebot', cons:'App-Komplexität für absolute Anfänger', fees:'ab EUR 0.99 oder Flatrate', security:'BaFin-reguliert', level:'Einsteiger bis Fortgeschritten', url:'https://www.scalable.capital'},
+    {name:'Interactive Brokers', assets:'Aktien, ETFs, Optionen, Anleihen, Krypto', pros:'Sehr günstig, riesiges internationales Angebot', cons:'Komplexere Oberfläche', fees:'ab USD 1 pro Trade', security:'International reguliert', level:'Fortgeschritten', url:'https://www.interactivebrokers.com'},
+    {name:'Comdirect', assets:'Aktien, ETFs, Fonds, Anleihen', pros:'Vollwertige Bank mit Beratung, etabliert', cons:'Höhere Gebühren als Neobroker', fees:'ab EUR 3.90 pro Trade', security:'Deutsche Bank, BaFin-reguliert', level:'Einsteiger bis Fortgeschritten', url:'https://www.comdirect.de'},
+  ],
+  'Österreich':[
+    {name:'Flatex', assets:'Aktien, ETFs, Fonds, Anleihen', pros:'Günstige Konditionen, breites Angebot', cons:'Ältere Plattform-Oberfläche', fees:'ab EUR 5.90 pro Trade', security:'Deutsche/österreichische Regulierung', level:'Einsteiger bis Fortgeschritten', url:'https://www.flatex.at'},
+    {name:'Interactive Brokers', assets:'Aktien, ETFs, Optionen, Krypto', pros:'Sehr günstig, riesiges Angebot', cons:'Komplexere Oberfläche', fees:'ab USD 1 pro Trade', security:'International reguliert', level:'Fortgeschritten', url:'https://www.interactivebrokers.com'},
+    {name:'DEGIRO', assets:'Aktien, ETFs, Anleihen', pros:'Günstige ETF-Sparpläne', cons:'Kein Krypto', fees:'ab EUR 2 pro Trade', security:'AFM-reguliert', level:'Einsteiger bis Fortgeschritten', url:'https://www.degiro.at'},
+    {name:'Erste Bank / George', assets:'Aktien, ETFs, Fonds', pros:'Vertraute Bank, einfache Integration', cons:'Höhere Gebühren', fees:'ab EUR 9 pro Trade', security:'Österreichische Bank, Einlagensicherung', level:'Einsteiger', url:'https://www.erstebank.at'},
+  ]
+};
+const GOAL_SUGGESTIONS = [
+  {name:'CHF 10\'000 Vermögen', target:10000},
+  {name:'CHF 1 Mio. Portfolio', target:1000000},
+  {name:'Finanzielle Freiheit', target:750000},
+  {name:'Eigenkapital für ein Haus', target:150000}
+];
+const EXCHANGES = [
+  {name:'NYSE / NASDAQ', tz:'America/New_York', open:[9,30], close:[16,0]},
+  {name:'SIX (Schweiz)', tz:'Europe/Zurich', open:[9,0], close:[17,30]},
+  {name:'LSE (London)', tz:'Europe/London', open:[8,0], close:[16,30]},
+  {name:'Xetra (Frankfurt)', tz:'Europe/Berlin', open:[9,0], close:[17,30]},
+];
+const CONTINENT_MAP = {
+  'Schweiz':'Europa', 'Deutschland':'Europa', 'Frankreich':'Europa', 'Grossbritannien':'Europa', 'Italien':'Europa', 'Spanien':'Europa', 'Österreich':'Europa',
+  'USA':'Nordamerika', 'Kanada':'Nordamerika',
+  'Japan':'Asien', 'China':'Asien', 'Indien':'Asien', 'Südkorea':'Asien',
+  'Global':'Global', 'Unbekannt':'Unbekannt'
+};
+const FLAG_EMOJI = {'Schweiz':'🇨🇭','Deutschland':'🇩🇪','Frankreich':'🇫🇷','Grossbritannien':'🇬🇧','USA':'🇺🇸','Kanada':'🇨🇦','Japan':'🇯🇵','China':'🇨🇳','Indien':'🇮🇳','Global':'🌍','Österreich':'🇦🇹','Italien':'🇮🇹','Spanien':'🇪🇸','Südkorea':'🇰🇷'};
+
+let investments = [], goals = [], portfolioHistory = [];
+let watchlist = [], alerts = [];
+let healthHistory = [];
+let currentDetailId = null, currentTf = 30, historyFilter='all', currentBreakdown='category';
+let currentDetailTf = '1M', detailLiveInterval = null;
+const TF_LABELS = {'1T':'die letzten 24 Stunden','1W':'die letzten 7 Tage','1M':'den letzten Monat','6M':'die letzten 6 Monate','1J':'das letzte Jahr','5J':'die letzten 5 Jahre','max':'die maximal verfügbare Historie (mehrere Jahre)'};
+let selectedAsset = null;
+let chatHistory = [];
+let charts = {};
+let availableCapital = 0, riskTolerance = 'ausgewogen', investmentGoal = 'Vermögensaufbau';
+let addMode = 'invest';
+let currentBrokerCountry = 'Schweiz';
+const RISK_BASE = {Cash:1, Anleihe:1, Edelmetall:2, REIT:2, Immobilie:2, Fonds:2, ETF:2, Index:2, Aktie:3, Rohstoff:3, Sonstige:2, Krypto:4};
+
+function load(){
+  try{ investments = JSON.parse(localStorage.getItem('cp3_investments')||'[]'); }catch(e){ investments=[]; }
+  try{ goals = JSON.parse(localStorage.getItem('cp3_goals')||'[]'); }catch(e){ goals=[]; }
+  try{ portfolioHistory = JSON.parse(localStorage.getItem('cp3_history')||'[]'); }catch(e){ portfolioHistory=[]; }
+  try{ watchlist = JSON.parse(localStorage.getItem('cp3_watchlist')||'[]'); }catch(e){ watchlist=[]; }
+  try{ alerts = JSON.parse(localStorage.getItem('cp3_alerts')||'[]'); }catch(e){ alerts=[]; }
+  try{ healthHistory = JSON.parse(localStorage.getItem('cp3_health_history')||'[]'); }catch(e){ healthHistory=[]; }
+  try{ const p = JSON.parse(localStorage.getItem('cp3_profile')||'null'); if(p){ availableCapital=p.capital||0; riskTolerance=p.risk||'ausgewogen'; investmentGoal=p.goal||'Vermögensaufbau'; } }catch(e){}
+}
+function persist(){
+  localStorage.setItem('cp3_investments', JSON.stringify(investments));
+  localStorage.setItem('cp3_goals', JSON.stringify(goals));
+  localStorage.setItem('cp3_history', JSON.stringify(portfolioHistory));
+  localStorage.setItem('cp3_watchlist', JSON.stringify(watchlist));
+  localStorage.setItem('cp3_alerts', JSON.stringify(alerts));
+}
+function persistProfile(){ localStorage.setItem('cp3_profile', JSON.stringify({capital:availableCapital, risk:riskTolerance, goal:investmentGoal})); }
+function computeRiskLevel(category, weightPct){
+  let score = RISK_BASE[category] ?? 2;
+  if(weightPct>30) score+=1;
+  if(weightPct>50) score+=1;
+  if(score<=1) return {label:'Niedrig', cls:'low'};
+  if(score<=2) return {label:'Mittel', cls:'mid'};
+  return {label:'Hoch', cls:'high'};
+}
+/* ============ CUSTOM DIALOGS (native confirm/prompt are blocked in sandboxed artifacts) ============ */
+let __confirmResolve = null;
+function confirmDialog(message, okLabel){
+  return new Promise(resolve=>{
+    __confirmResolve = resolve;
+    document.getElementById('confirm-dialog-message').textContent = message;
+    document.getElementById('confirm-dialog-ok').textContent = okLabel || 'Löschen';
+    openSheet('sheet-confirm-dialog');
+  });
+}
+function resolveConfirmDialog(val){
+  closeSheet('sheet-confirm-dialog');
+  const r = __confirmResolve; __confirmResolve = null;
+  if(r) r(val);
+}
+let __promptResolve = null;
+function promptDialog(message, defaultValue, inputType){
+  return new Promise(resolve=>{
+    __promptResolve = resolve;
+    document.getElementById('prompt-dialog-title').textContent = message;
+    const input = document.getElementById('prompt-dialog-input');
+    input.type = inputType || 'text';
+    input.value = (defaultValue!=null) ? defaultValue : '';
+    openSheet('sheet-prompt-dialog');
+    setTimeout(()=>{ input.focus(); input.select(); }, 250);
+  });
+}
+function resolvePromptDialog(val){
+  closeSheet('sheet-prompt-dialog');
+  const r = __promptResolve; __promptResolve = null;
+  if(r) r(val);
+}
+function resolvePromptDialogFromInput(){
+  resolvePromptDialog(document.getElementById('prompt-dialog-input').value);
+}
+
+function uid(){ return Math.random().toString(36).slice(2,10); }
+function fmtCHF(n){ return 'CHF ' + (n||0).toLocaleString('de-CH',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtPct(n){ return (n>=0?'+':'') + (n||0).toLocaleString('de-CH',{minimumFractionDigits:1,maximumFractionDigits:1}) + '%'; }
+function animateNumber(el, from, to, duration, fmt){
+  if(Math.abs(to-from)<0.01){ el.textContent = fmt(to); return; }
+  const start = performance.now();
+  function tick(now){
+    const p = Math.min(1, (now-start)/duration);
+    const eased = 1 - Math.pow(1-p, 3);
+    el.textContent = fmt(from + (to-from)*eased);
+    if(p<1) requestAnimationFrame(tick); else el.textContent = fmt(to);
+  }
+  requestAnimationFrame(tick);
+}
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function showToast(msg){ const t=document.createElement('div'); t.className='toast'; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),2400); }
+function destroyChart(k){ if(charts[k]){ charts[k].destroy(); delete charts[k]; } }
+
+/* ============ HOLDING MATH ============ */
+function computeHolding(inv){
+  const txs = [...(inv.transactions||[])].sort((a,b)=>a.date.localeCompare(b.date));
+  let qty=0, costBasis=0, realized=0;
+  txs.forEach(tx=>{
+    if(tx.type==='buy'){ costBasis += tx.quantity*tx.price + (tx.fees||0); qty += tx.quantity; }
+    else{
+      const avg = qty>0 ? costBasis/qty : 0;
+      const proceeds = tx.quantity*tx.price - (tx.fees||0);
+      const removedCost = avg*tx.quantity;
+      realized += proceeds - removedCost; costBasis -= removedCost; qty -= tx.quantity;
+      if(qty<0.0000001) qty=0;
+    }
+  });
+  const avgCost = qty>0 ? costBasis/qty : 0;
+  const currentPrice = inv.currentPrice != null ? inv.currentPrice : avgCost;
+  const value = currentPrice*qty;
+  const unrealized = (currentPrice-avgCost)*qty;
+  const totalBuyCost = txs.filter(t=>t.type==='buy').reduce((s,t)=>s+t.quantity*t.price+(t.fees||0),0);
+  const totalGain = realized+unrealized;
+  const retPct = totalBuyCost!==0 ? (totalGain/totalBuyCost)*100 : 0;
+  const fx = FX_TO_CHF[inv.currency]||1;
+  return {...inv, qty, avgCost, costBasis, realized, unrealized, value, totalGain, retPct, totalBuyCost,
+    valueCHF: value*fx, costCHF: costBasis*fx, unrealizedCHF: unrealized*fx, realizedCHF: realized*fx, investedCHF: totalBuyCost*fx};
+}
+function allHoldings(){ return investments.map(computeHolding); }
+function totalValueCHF(list){ return list.reduce((s,i)=>s+i.valueCHF,0); }
+function snapshotHistory(){
+  const val = totalValueCHF(allHoldings()); const today = todayISO();
+  const idx = portfolioHistory.findIndex(h=>h.date===today);
+  if(idx>=0) portfolioHistory[idx].value=val; else portfolioHistory.push({date:today, value:val});
+  portfolioHistory.sort((a,b)=>a.date.localeCompare(b.date));
+  if(portfolioHistory.length>730) portfolioHistory = portfolioHistory.slice(-730);
+}
+
+/* ============ NAV ============ */
+function nav(screen){
+  stopDetailLive();
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('screen-'+screen).classList.add('active');
+  const btn = document.querySelector(`.nav-btn[data-screen="${screen}"]`); if(btn) btn.classList.add('active');
+  window.scrollTo(0,0);
+  if(screen==='home') renderHome();
+  if(screen==='analytics') renderAnalytics();
+  if(screen==='coach'){ renderCoachProfileSummary(); if(!chatHistory.length) initChat(); }
+  if(screen==='more') renderMore();
+}
+function goHome(){ nav('home'); }
+function openSheet(id){ document.getElementById(id).classList.add('active'); }
+function closeSheet(id){ document.getElementById(id).classList.remove('active'); }
+
+/* ============ HOME ============ */
+document.querySelectorAll('#tf-chips .chip').forEach(c=>{
+  c.addEventListener('click', ()=>{ document.querySelectorAll('#tf-chips .chip').forEach(x=>x.classList.remove('active')); c.classList.add('active'); currentTf = c.dataset.tf==='all'?'all':parseInt(c.dataset.tf); renderPortfolioChart(); });
+});
+document.getElementById('home-details-disclosure').addEventListener('toggle', function(){
+  if(this.open){ renderAllocChart(allHoldings().filter(h=>h.qty>0)); }
+});
+function periodChangePct(days){
+  if(portfolioHistory.length<1) return 0;
+  const last = portfolioHistory[portfolioHistory.length-1].value;
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-days);
+  const cutoffStr = cutoff.toISOString().slice(0,10);
+  let ref = portfolioHistory[0];
+  for(const h of portfolioHistory){ if(h.date<=cutoffStr) ref=h; }
+  return ref.value!==0 ? ((last-ref.value)/ref.value)*100 : 0;
+}
+function renderPeriodGrid(){
+  const periods = [{l:'1 Tag', d:1},{l:'1 Woche', d:7},{l:'1 Monat', d:30},{l:'1 Jahr', d:365}];
+  document.getElementById('period-grid').innerHTML = periods.map(p=>{
+    const pct = periodChangePct(p.d);
+    return `<div class="period-box"><div class="l">${p.l}</div><div class="v ${pct>=0?'pos':'neg'}">${fmtPct(pct)}</div></div>`;
+  }).join('');
+}
+function filteredHistory(){
+  if(currentTf==='all' || !portfolioHistory.length) return portfolioHistory;
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-currentTf);
+  const cutoffStr = cutoff.toISOString().slice(0,10);
+  const filtered = portfolioHistory.filter(h=>h.date>=cutoffStr);
+  return filtered.length ? filtered : portfolioHistory;
+}
+function renderHome(){
+  const list = allHoldings();
+  const total = totalValueCHF(list);
+  const hasInvestments = investments.length>0;
+  document.getElementById('home-onboarding').classList.toggle('hidden', hasInvestments);
+  document.getElementById('home-main-content').classList.toggle('hidden', !hasInvestments);
+  const totalEl = document.getElementById('home-total');
+  const prevTotal = window.__lastHomeTotalShown==null ? total : window.__lastHomeTotalShown;
+  animateNumber(totalEl, prevTotal, total, 500, v=>fmtCHF(v));
+  window.__lastHomeTotalShown = total;
+  if(!hasInvestments){
+    document.getElementById('home-delta').innerHTML = '';
+    document.getElementById('home-sub').textContent = '';
+    return;
+  }
+  let delta=0, deltaPct=0;
+  if(portfolioHistory.length>1){
+    const last = portfolioHistory[portfolioHistory.length-1].value;
+    const prev = portfolioHistory[portfolioHistory.length-2].value;
+    delta = last-prev; deltaPct = prev!==0 ? (delta/prev)*100 : 0;
+  }
+  const dEl = document.getElementById('home-delta');
+  const arrow = delta>=0 ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 19V5M5 12l7-7 7 7"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12l7 7 7-7"/></svg>';
+  dEl.className = 'hero-delta ' + (delta>=0?'pos':'neg');
+  dEl.innerHTML = `${arrow}${fmtCHF(Math.abs(delta))} · ${fmtPct(deltaPct)} heute`;
+  const totalInvested = list.reduce((s,h)=>s+h.investedCHF,0);
+  const totalGainCHF = list.reduce((s,h)=>s+h.unrealizedCHF+h.realizedCHF,0);
+  const totalRet = totalInvested!==0 ? (totalGainCHF/totalInvested)*100 : 0;
+  document.getElementById('home-sub').textContent = `Investiert ${fmtCHF(totalInvested)} · Gesamt ${fmtPct(totalRet)}`;
+  document.getElementById('ov-invested').textContent = fmtCHF(totalInvested);
+  document.getElementById('ov-cash').textContent = fmtCHF(availableCapital);
+  document.getElementById('ov-gain').innerHTML = `<span style="color:${totalGainCHF>=0?'var(--green)':'var(--red)'}">${fmtCHF(totalGainCHF)}</span>`;
+  document.getElementById('ov-return').innerHTML = `<span style="color:${totalRet>=0?'var(--green)':'var(--red)'}">${fmtPct(totalRet)}</span>`;
+  renderPeriodGrid();
+  renderHomeGoals(total);
+
+  document.getElementById('pos-count').textContent = list.length + (list.length===1?' Position':' Positionen');
+  document.getElementById('holdings-empty').classList.toggle('hidden', list.length>0);
+  const active = list.filter(h=>h.qty>0);
+  const sorted = [...active].sort((a,b)=>b.valueCHF-a.valueCHF);
+  document.getElementById('holdings-list').innerHTML = sorted.map(h=>{
+    const weightPct = total>0 ? (h.valueCHF/total)*100 : 0;
+    const risk = computeRiskLevel(h.category, weightPct);
+    return `
+    <div class="holding-row" onclick="openDetail('${h.id}')">
+      <div class="holding-icon">${(h.symbol||h.name).slice(0,2).toUpperCase()}</div>
+      <div class="holding-info"><div class="holding-name">${h.name}</div><div class="holding-sub">${h.category} · ${h.qty.toLocaleString('de-CH',{maximumFractionDigits:4})} Stk.</div></div>
+      <div class="holding-right"><div class="holding-value num">${fmtCHF(h.valueCHF)}</div><div class="holding-change ${h.retPct>=0?'pos':'neg'}">${fmtPct(h.retPct)}</div><div class="risk-badge ${risk.cls}">${risk.label}</div></div>
+      <div class="wl-btn" style="color:var(--red); margin-left:2px;" onclick="event.stopPropagation(); deleteInvestmentById('${h.id}')" title="Investment löschen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></div>
+    </div>`;
+  }).join('');
+
+  if(active.length){
+    const bySort = [...active].sort((a,b)=>b.retPct-a.retPct);
+    const best = bySort[0], worst = bySort[bySort.length-1];
+    document.getElementById('mv-best-name').textContent = best.name;
+    document.getElementById('mv-best-pct').textContent = fmtPct(best.retPct);
+    document.getElementById('mv-best-pct').className = 'p ' + (best.retPct>=0?'pos':'neg');
+    document.getElementById('mv-worst-name').textContent = worst.name;
+    document.getElementById('mv-worst-pct').textContent = fmtPct(worst.retPct);
+    document.getElementById('mv-worst-pct').className = 'p ' + (worst.retPct>=0?'pos':'neg');
+  } else {
+    document.getElementById('mv-best-name').textContent = '–'; document.getElementById('mv-best-pct').textContent='';
+    document.getElementById('mv-worst-name').textContent = '–'; document.getElementById('mv-worst-pct').textContent='';
+  }
+
+  renderHealthScore(active);
+  renderPortfolioChart();
+  renderAllocChart(active);
+  renderDailyInsight(active);
+  renderMarketStatus();
+}
+function renderPortfolioChart(){
+  destroyChart('portfolio');
+  const data = filteredHistory();
+  const pts = data.length ? data : [{date:todayISO(), value:totalValueCHF(allHoldings())}];
+  const rising = pts.length>1 ? pts[pts.length-1].value >= pts[0].value : true;
+  const lineColor = rising ? '#22c55e' : '#ef4444';
+  charts.portfolio = new Chart(document.getElementById('chart-portfolio'), {
+    type:'line', data:{labels:pts.map(p=>p.date), datasets:[{data:pts.map(p=>p.value), borderColor:lineColor, backgroundColor:lineColor+'14', fill:true, tension:.4, pointRadius:0, borderWidth:2}]},
+    options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{display:false}, y:{display:false}}, interaction:{intersect:false}}
+  });
+}
+function renderAllocChart(list){
+  destroyChart('alloc');
+  const byCat = {}; list.forEach(i=>{byCat[i.category]=(byCat[i.category]||0)+i.valueCHF;});
+  charts.alloc = new Chart(document.getElementById('chart-alloc'), {
+    type:'doughnut', data:{labels:Object.keys(byCat), datasets:[{data:Object.values(byCat), backgroundColor:CHART_COLORS, borderWidth:0}]},
+    options:{responsive:true, maintainAspectRatio:false, cutout:'68%', plugins:{legend:{position:'bottom', labels:{color:'#767c87', boxWidth:8, font:{size:10.5}, padding:12}}}}
+  });
+}
+function renderHealthScore(list){
+  const total = totalValueCHF(list);
+  let divScore=50, riskScore=50, perfScore=50;
+  if(list.length && total>0){
+    const maxWeight = Math.max(...list.map(h=>h.valueCHF/total))*100;
+    divScore = Math.max(0, Math.min(100, Math.round(100 - maxWeight*1.3 + Math.min(list.length,10)*3)));
+    riskScore = Math.max(0, Math.min(100, Math.round(100 - maxWeight)));
+    const avgRet = list.reduce((s,h)=>s+h.retPct,0)/list.length;
+    perfScore = Math.max(0, Math.min(100, Math.round(50 + avgRet*1.2)));
+  }
+  const health = list.length ? Math.round(divScore*0.4 + riskScore*0.3 + perfScore*0.3) : 0;
+  const circumference = 2*Math.PI*27;
+  const offset = circumference - (health/100)*circumference;
+  const ring = document.getElementById('health-ring');
+  ring.setAttribute('stroke-dasharray', circumference);
+  ring.setAttribute('stroke-dashoffset', list.length ? offset : circumference);
+  ring.setAttribute('stroke', health>=70?'#22c55e':health>=40?'#f59e0b':'#ef4444');
+  document.getElementById('health-num').textContent = list.length ? health : '–';
+  document.getElementById('health-sub').textContent = list.length ? (health>=70?'Solide aufgestellt':health>=40?'Verbesserungspotenzial':'Erhöhtes Risiko') : 'Noch keine Daten';
+  window.__healthScores = {health, divScore, riskScore, perfScore};
+  if(list.length){
+    healthHistory = healthHistory||[];
+    const today = todayISO();
+    const idx = healthHistory.findIndex(h=>h.date===today);
+    const entry = {date:today, health, divScore, riskScore, perfScore};
+    if(idx>=0) healthHistory[idx]=entry; else healthHistory.push(entry);
+    if(healthHistory.length>180) healthHistory = healthHistory.slice(-180);
+    localStorage.setItem('cp3_health_history', JSON.stringify(healthHistory));
+  }
+  document.getElementById('health-detail').innerHTML = `
+    <div class="stat-grid" style="margin-bottom:16px;">
+      <div class="stat-box"><div class="l">Diversifikation</div><div class="v">${divScore}/100</div></div>
+      <div class="stat-box"><div class="l">Risiko</div><div class="v">${riskScore}/100</div></div>
+      <div class="stat-box"><div class="l">Performance</div><div class="v">${perfScore}/100</div></div>
+      <div class="stat-box"><div class="l">Gesamt</div><div class="v">${health}/100</div></div>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="explainWhy('risk')" style="margin-bottom:14px;">Warum hat sich mein Risiko verändert?</button>
+    <p style="font-size:13px; color:var(--text-dim); line-height:1.6;">Der Health Score kombiniert Diversifikation (40%), Risiko-Konzentration (30%) und Performance (30%). Ein hoher Wert bedeutet ein breit gestreutes Portfolio ohne grosse Klumpenrisiken bei solider Wertentwicklung.</p>`;
+}
+async function renderDailyInsight(list){
+  const card = document.getElementById('insight-card');
+  if(!list.length){
+    card.querySelector('.insight-loading, .insight-text')?.remove();
+    const div = document.createElement('div'); div.className='insight-text'; div.textContent='Füge dein erstes Investment hinzu, um tägliche Insights zu erhalten.';
+    card.appendChild(div); return;
+  }
+  const cacheKey = 'cp3_insight_' + todayISO();
+  const cached = localStorage.getItem(cacheKey);
+  if(cached){ setInsightText(cached); return; }
+  const total = totalValueCHF(list);
+  const summary = list.map(h=>({name:h.name, category:h.category, weightPct:+((h.valueCHF/total)*100).toFixed(1), returnPct:+h.retPct.toFixed(1)}));
+  try{
+    const res = await callClaude(`Du bist ein nüchterner Investment-Coach. Gib EINEN prägnanten, konkreten deutschen Satz (max 25 Wörter) als Tages-Insight zu diesem Portfolio, der etwas Auffälliges hervorhebt (grösste Position, beste/schwächste Bewegung, Konzentration o.ä.). Antworte NUR mit dem Satz, keine Anführungszeichen, kein JSON.\nPortfolio: ${JSON.stringify(summary)}`);
+    const text = res.trim();
+    localStorage.setItem(cacheKey, text);
+    setInsightText(text);
+  }catch(e){ setInsightText('Insight konnte nicht geladen werden.'); }
+}
+function setInsightText(text){
+  const card = document.getElementById('insight-card');
+  const loading = card.querySelector('.insight-loading');
+  if(loading) loading.remove();
+  let el = card.querySelector('.insight-text');
+  if(!el){ el = document.createElement('div'); el.className='insight-text'; card.appendChild(el); }
+  el.textContent = text;
+}
+
+/* ============ SEARCH & ADD ============ */
+function openAddSheet(mode){
+  addMode = mode || 'invest';
+  document.getElementById('asset-search').value=''; selectedAsset=null; renderSuggestions();
+  document.querySelector('#sheet-add .sheet-title').textContent = addMode==='watchlist' ? 'Zur Watchlist hinzufügen' : 'Investment hinzufügen';
+  openSheet('sheet-add'); setTimeout(()=>document.getElementById('asset-search').focus(),200);
+}
+function renderSuggestions(){
+  const q = document.getElementById('asset-search').value.trim().toLowerCase();
+  const list = document.getElementById('suggestion-list');
+  if(!q){ list.innerHTML=''; return; }
+  const matches = ASSET_DB.filter(a=>a.symbol.toLowerCase().includes(q)||a.name.toLowerCase().includes(q))
+    .sort((a,b)=>{
+      const aStarts = a.symbol.toLowerCase().startsWith(q)||a.name.toLowerCase().startsWith(q);
+      const bStarts = b.symbol.toLowerCase().startsWith(q)||b.name.toLowerCase().startsWith(q);
+      return (bStarts-aStarts);
+    }).slice(0,8);
+  list.innerHTML = matches.map(a=>`
+    <div class="suggestion-row" onclick='selectAsset(${JSON.stringify(a).replace(/'/g,"&apos;")})'>
+      <div class="sugg-icon">${a.symbol.slice(0,2)}</div>
+      <div class="sugg-info"><div class="sugg-name">${a.name}</div><div class="sugg-sub">${a.symbol} · ${a.exchange}</div></div>
+      <div class="sugg-tag">${a.category}</div>
+    </div>`).join('') || '<div class="empty"><p>Keine Treffer. Versuch einen anderen Namen.</p></div>';
+}
+function selectAsset(asset){
+  selectedAsset = asset;
+  closeSheet('sheet-add');
+  if(addMode==='watchlist'){ addToWatchlist(asset); return; }
+  document.getElementById('q-date').value = todayISO();
+  document.getElementById('q-price').value = '';
+  document.getElementById('confirm-asset-card').innerHTML = `<div class="fetch-loading"><div class="spinner"></div>Kurs wird per Websuche abgerufen…</div>`;
+  document.getElementById('confirm-risk-info').innerHTML = riskInfoHtml(asset.category);
+  openSheet('sheet-confirm');
+  fetchLivePrice(asset);
+}
+async function addToWatchlist(asset){
+  showToast('Kurs wird abgerufen…');
+  let price = asset.price, currency = asset.currency;
+  try{
+    const text = await callClaude(`Finde per Websuche den ungefähren aktuellen Kurs für "${asset.name}" (Symbol: ${asset.symbol}). Antworte NUR mit JSON: {"price": number, "currency":"USD|EUR|CHF|GBP"}`, true);
+    const data = JSON.parse(text.replace(/```json|```/g,'').trim());
+    price = data.price; currency = data.currency || currency;
+  }catch(e){}
+  watchlist.push({id:uid(), symbol:asset.symbol, name:asset.name, category:asset.category, currency, addedPrice:price, currentPrice:price, addedDate:todayISO()});
+  persist(); renderWatchlistContent(); showToast('Zur Watchlist hinzugefügt');
+}
+function riskInfoHtml(category){
+  const info = CATEGORY_INFO[category] || CATEGORY_INFO['Sonstige'];
+  return `<details class="acc-item" style="margin-top:4px; margin-bottom:16px;"><summary>Risikoeinschätzung: ${info.risk}</summary>
+    <p><strong>Historische Schwankung:</strong> ${info.vol}</p>
+    <p><strong>Chancen:</strong> ${info.chances}</p>
+    <p><strong>Risiken:</strong> ${info.risks}</p>
+    <p><strong>Langfristige Einschätzung:</strong> ${info.outlook}</p></details>`;
+}
+async function fetchLivePrice(asset){
+  try{
+    const prompt = `Finde per Websuche den ungefähren aktuellen Kurs für "${asset.name}" (Symbol: ${asset.symbol}, Börse: ${asset.exchange}). Antworte NUR mit einem JSON-Objekt ohne Markdown: {"price": number, "currency":"USD|EUR|CHF|GBP"}`;
+    const text = await callClaude(prompt, true);
+    const clean = text.replace(/```json|```/g,'').trim();
+    const data = JSON.parse(clean);
+    asset.livePrice = data.price; asset.currency = data.currency || asset.currency;
+  }catch(e){ asset.livePrice = asset.price; }
+  renderConfirmCard(asset);
+}
+function renderConfirmCard(asset){
+  document.getElementById('confirm-asset-card').innerHTML = `
+    <div class="selected-asset-card">
+      <div class="sugg-icon">${asset.symbol.slice(0,2)}</div>
+      <div class="sugg-info"><div class="sugg-name">${asset.name}</div><div class="sugg-sub">${asset.symbol} · ${asset.category}</div></div>
+      <div class="price num">${(asset.livePrice||asset.price).toLocaleString('de-CH',{maximumFractionDigits:2})} ${asset.currency}</div>
+    </div>`;
+  if(!document.getElementById('q-price').value) document.getElementById('q-price').value = asset.livePrice||asset.price;
+}
+function toggleExtra(prefix){
+  const t = document.getElementById(prefix+'-toggle'); const e = document.getElementById(prefix+'-extra');
+  t.classList.toggle('open'); e.classList.toggle('open');
+}
+function saveQuickInvestment(e){
+  e.preventDefault();
+  const price = parseFloat(document.getElementById('q-price').value)||0;
+  const qty = parseFloat(document.getElementById('q-qty').value)||0;
+  const date = document.getElementById('q-date').value;
+  const fees = parseFloat(document.getElementById('q-fees').value)||0;
+  const inv = {
+    id:uid(), name:selectedAsset.name, symbol:selectedAsset.symbol, category:selectedAsset.category,
+    broker: document.getElementById('q-broker').value.trim() || 'Sonstige',
+    currency: selectedAsset.currency, sector: document.getElementById('q-sector').value.trim(),
+    country: document.getElementById('q-country').value.trim(), dividendYield: parseFloat(document.getElementById('q-div').value)||0,
+    currentPrice: selectedAsset.livePrice || selectedAsset.price,
+    priceHistory:[{date, price:selectedAsset.livePrice||selectedAsset.price}],
+    transactions:[{id:uid(), type:'buy', date, price, quantity:qty, fees}]
+  };
+  investments.push(inv); snapshotHistory(); persist();
+  closeSheet('sheet-confirm'); e.target.reset();
+  document.getElementById('q-extra').classList.remove('open'); document.getElementById('q-toggle').classList.remove('open');
+  showToast('Investment hinzugefügt'); nav('home'); checkMilestones();
+  return false;
+}
+function openManualSheet(){ document.getElementById('m-date').value = todayISO(); openSheet('sheet-manual'); }
+function saveManualInvestment(e){
+  e.preventDefault();
+  const price = parseFloat(document.getElementById('m-price').value)||0;
+  const qty = parseFloat(document.getElementById('m-qty').value)||0;
+  const inv = {
+    id:uid(), name:document.getElementById('m-name').value.trim(), symbol:document.getElementById('m-symbol').value.trim(),
+    category:document.getElementById('m-category').value, broker:document.getElementById('m-broker').value.trim()||'Sonstige',
+    currency:document.getElementById('m-currency').value, sector:document.getElementById('m-sector').value.trim(),
+    country:document.getElementById('m-country').value.trim(), dividendYield:parseFloat(document.getElementById('m-div').value)||0,
+    currentPrice: price, priceHistory:[{date:document.getElementById('m-date').value, price}],
+    transactions:[{id:uid(), type:'buy', date:document.getElementById('m-date').value, price, quantity:qty, fees:parseFloat(document.getElementById('m-fees').value)||0}]
+  };
+  investments.push(inv); snapshotHistory(); persist();
+  closeSheet('sheet-manual'); e.target.reset();
+  showToast('Investment hinzugefügt'); nav('home'); checkMilestones();
+  return false;
+}
+
+/* ============ DETAIL ============ */
+function tfCutoffDate(tfKey){
+  if(tfKey==='max') return null;
+  const days = {'1T':1,'1W':7,'1M':30,'6M':182,'1J':365,'5J':1825}[tfKey];
+  const d = new Date(); d.setDate(d.getDate()-days); return d;
+}
+function filterLocalHistory(inv, cutoff){
+  let hist = inv.priceHistory||[];
+  if(cutoff){ const cutoffStr = cutoff.toISOString().slice(0,10); const filtered = hist.filter(p=>p.date>=cutoffStr); if(filtered.length>=2) hist = filtered; }
+  if(hist.length<2){ const p = inv.currentPrice||0; hist = [{date:todayISO(), price:p},{date:todayISO(), price:p}]; }
+  return hist;
+}
+function localCoversTf(inv, cutoff){
+  const hist = inv.priceHistory||[];
+  if(!hist.length || !cutoff) return false;
+  return new Date(hist[0].date) <= cutoff;
+}
+function mergeWithLocal(points, inv){
+  const local = inv.priceHistory||[];
+  const merged = [...points, ...local].sort((a,b)=>a.date.localeCompare(b.date));
+  const seen = new Set(); const out = [];
+  merged.forEach(p=>{ if(!seen.has(p.date)){ seen.add(p.date); out.push(p); } });
+  return out;
+}
+async function getDetailChartData(inv, tfKey){
+  const cutoff = tfCutoffDate(tfKey);
+  if(tfKey==='1T' || tfKey==='1W' || localCoversTf(inv, cutoff)){
+    return filterLocalHistory(inv, cutoff);
+  }
+  inv.historicalCache = inv.historicalCache || {};
+  const cached = inv.historicalCache[tfKey];
+  const dayMs = 24*60*60*1000;
+  if(cached && (Date.now()-cached.fetchedAt < dayMs)){
+    return mergeWithLocal(cached.points, inv);
+  }
+  try{
+    const label = TF_LABELS[tfKey];
+    const text = await callClaude(`Finde per Websuche ungefähre historische Schlusskurse für "${inv.name}" (Symbol: ${inv.symbol||''}) für ${label}. Gib 8 bis 12 ungefähre, chronologisch aufsteigende Datenpunkte zurück. Antworte NUR mit JSON: {"points":[{"date":"YYYY-MM-DD","price":number}]}`, true);
+    const data = JSON.parse(text.replace(/```json|```/g,'').trim());
+    if(data.points && data.points.length){
+      inv.historicalCache[tfKey] = {points:data.points, fetchedAt:Date.now()};
+      persist();
+      return mergeWithLocal(data.points, inv);
+    }
+  }catch(e){}
+  return filterLocalHistory(inv, cutoff);
+}
+async function renderDetailChart(tfKey){
+  currentDetailTf = tfKey;
+  document.querySelectorAll('#detail-tf-chips .chip').forEach(c=>c.classList.toggle('active', c.dataset.tf===tfKey));
+  const inv = investments.find(i=>i.id===currentDetailId);
+  if(!inv) return;
+  document.getElementById('chart-loading-overlay').classList.remove('hidden');
+  const points = await getDetailChartData(inv, tfKey);
+  if(currentDetailId !== inv.id) return;
+  document.getElementById('chart-loading-overlay').classList.add('hidden');
+  const first = points[0].price, last = points[points.length-1].price;
+  const rising = last >= first;
+  destroyChart('detail');
+  charts.detail = new Chart(document.getElementById('chart-detail'), {
+    type:'line', data:{labels:points.map(p=>p.date), datasets:[{data:points.map(p=>p.price), borderColor:rising?'#22c55e':'#ef4444', backgroundColor:(rising?'#22c55e':'#ef4444')+'14', fill:true, tension:.4, pointRadius:0, borderWidth:2}]},
+    options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{display:false}, y:{display:false}}, interaction:{intersect:false}}
+  });
+  const absChange = last-first;
+  const pctChange = first!==0 ? (absChange/first)*100 : 0;
+  document.getElementById('price-info-grid').innerHTML = `
+    <div class="period-box"><div class="l">Kurs</div><div class="v">${(inv.currentPrice||last).toLocaleString('de-CH',{maximumFractionDigits:2})} ${inv.currency}</div></div>
+    <div class="period-box"><div class="l">Veränderung</div><div class="v ${pctChange>=0?'pos':'neg'}">${fmtPct(pctChange)}</div></div>
+    <div class="period-box"><div class="l">Tageshoch/-tief</div><div class="v" style="font-size:11.5px;">${inv.dayHigh?inv.dayHigh.toLocaleString('de-CH',{maximumFractionDigits:2}):'–'} / ${inv.dayLow?inv.dayLow.toLocaleString('de-CH',{maximumFractionDigits:2}):'–'}</div></div>
+    <div class="period-box"><div class="l">Volumen</div><div class="v" style="font-size:11.5px;">${inv.volume ? Number(inv.volume).toLocaleString('de-CH') : '–'}</div></div>`;
+}
+document.addEventListener('click', (e)=>{
+  const chip = e.target.closest('#detail-tf-chips .chip');
+  if(chip) renderDetailChart(chip.dataset.tf);
+});
+async function fetchQuote(inv){
+  const text = await callClaude(`Finde per Websuche den aktuellen Kurs, das heutige Tageshoch, Tagestief und wenn verfügbar das Handelsvolumen für "${inv.name}" (Symbol: ${inv.symbol||''}). Antworte NUR mit JSON: {"price":number, "dayHigh":number, "dayLow":number, "volume":number}`, true);
+  return JSON.parse(text.replace(/```json|```/g,'').trim());
+}
+async function silentQuoteRefresh(invId){
+  const inv = investments.find(i=>i.id===invId);
+  if(!inv) return;
+  try{
+    const prevPrice = inv.currentPrice;
+    const q = await fetchQuote(inv);
+    if(q.price){ inv.currentPrice = q.price; inv.priceHistory = inv.priceHistory||[]; inv.priceHistory.push({date:todayISO(), price:q.price}); checkAlerts(inv, prevPrice, q.price); }
+    if(q.dayHigh) inv.dayHigh = q.dayHigh;
+    if(q.dayLow) inv.dayLow = q.dayLow;
+    if(q.volume) inv.volume = q.volume;
+    snapshotHistory(); persist();
+    if(currentDetailId===invId && document.getElementById('screen-detail').classList.contains('active')){
+      renderDetailChart(currentDetailTf);
+      document.getElementById('detail-value').textContent = fmtCHF(computeHolding(inv).valueCHF);
+    }
+  }catch(e){}
+}
+function startDetailLive(){
+  stopDetailLive();
+  detailLiveInterval = setInterval(()=>{
+    if(document.getElementById('screen-detail').classList.contains('active') && currentDetailId){ silentQuoteRefresh(currentDetailId); }
+  }, 45000);
+}
+function stopDetailLive(){ if(detailLiveInterval){ clearInterval(detailLiveInterval); detailLiveInterval=null; } }
+async function renderAssetAiAnalysis(force){
+  const inv = investments.find(i=>i.id===currentDetailId);
+  if(!inv) return;
+  const el = document.getElementById('asset-insight-card');
+  const cacheKey = 'cp3_asset_insight_' + inv.id + '_' + todayISO();
+  if(!force){
+    const cached = localStorage.getItem(cacheKey);
+    if(cached){ renderAssetInsightHtml(JSON.parse(cached)); return; }
+  }
+  el.innerHTML = '<div class="insight-loading"><div class="spinner"></div>Wird analysiert…</div>';
+  try{
+    const prompt = `Du bist ein nüchterner Investment-Analyst. Nutze die Websuche nach aktuellen Nachrichten zu "${inv.name}" (Symbol: ${inv.symbol||''}). Antworte NUR mit JSON, kein Markdown: {"movement_reason":"1-2 Sätze warum sich der Kurs zuletzt bewegt hat","news":"1-2 Sätze zu aktuellen relevanten Nachrichten, oder 'Keine auffälligen aktuellen Nachrichten gefunden.'","opportunities":"1-2 Sätze","risks":"1-2 Sätze","factors":"1-2 Sätze zu aktuell kursbeeinflussenden Faktoren"}`;
+    const text = await callClaude(prompt, true);
+    const data = JSON.parse(text.replace(/```json|```/g,'').trim());
+    localStorage.setItem(cacheKey, JSON.stringify(data));
+    if(currentDetailId===inv.id) renderAssetInsightHtml(data);
+  }catch(e){
+    el.innerHTML = '<p style="font-size:13px; color:var(--text-faint);">Analyse konnte nicht geladen werden.</p>';
+  }
+}
+function renderAssetInsightHtml(data){
+  const el = document.getElementById('asset-insight-card');
+  el.innerHTML = `
+    <div class="coach-block" style="margin-bottom:12px;"><h4>Warum bewegt sich der Kurs?</h4><p>${data.movement_reason||''}</p></div>
+    <div class="coach-block" style="margin-bottom:12px;"><h4>Aktuelle Nachrichten</h4><p>${data.news||''}</p></div>
+    <div class="coach-block" style="margin-bottom:12px;"><h4>Chancen</h4><p>${data.opportunities||''}</p></div>
+    <div class="coach-block" style="margin-bottom:12px;"><h4>Risiken</h4><p>${data.risks||''}</p></div>
+    <div class="coach-block"><h4>Kursfaktoren</h4><p>${data.factors||''}</p></div>`;
+}
+function openDetail(id){
+  currentDetailId = id;
+  const inv = investments.find(i=>i.id===id);
+  const h = computeHolding(inv);
+  document.getElementById('detail-name').textContent = h.name + (h.symbol?' · '+h.symbol:'');
+  document.getElementById('detail-value').textContent = fmtCHF(h.valueCHF);
+  const chg = document.getElementById('detail-change');
+  chg.style.color = h.retPct>=0 ? 'var(--green)' : 'var(--red)';
+  chg.textContent = fmtPct(h.retPct) + ' seit Kauf';
+  document.getElementById('d-qty').textContent = h.qty.toLocaleString('de-CH',{maximumFractionDigits:4});
+  document.getElementById('d-avg').textContent = h.avgCost.toLocaleString('de-CH',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' ' + h.currency;
+  document.getElementById('d-unreal').textContent = fmtCHF(h.unrealizedCHF);
+  document.getElementById('d-real').textContent = fmtCHF(h.realizedCHF);
+  const allTotal = totalValueCHF(allHoldings());
+  const dWeight = allTotal>0 ? (h.valueCHF/allTotal)*100 : 0;
+  const dRisk = computeRiskLevel(h.category, dWeight);
+  document.getElementById('d-risk').innerHTML = `<span class="risk-badge ${dRisk.cls}" style="margin-top:0;">${dRisk.label}</span>`;
+  const divReceived = (inv.dividends||[]).reduce((s,d)=>s+d.amount,0);
+  const divExpected = h.valueCHF * ((inv.dividendYield||0)/100);
+  document.getElementById('d-div-received').textContent = fmtCHF(divReceived * (FX_TO_CHF[inv.currency]||1));
+  document.getElementById('d-div-expected').textContent = fmtCHF(divExpected);
+  renderDetailAlerts(inv.id);
+  currentDetailTf = '1M';
+  document.querySelectorAll('#detail-tf-chips .chip').forEach(c=>c.classList.toggle('active', c.dataset.tf==='1M'));
+  renderDetailChart('1M');
+  renderAssetAiAnalysis(false);
+  const txs = [...(inv.transactions||[])].sort((a,b)=>b.date.localeCompare(a.date));
+  document.getElementById('detail-tx-list').innerHTML = txs.length ? txs.map(tx=>txRowHtml(tx,h)).join('') : '<div class="empty"><p>Noch keine Transaktionen.</p></div>';
+  attachSwipeHandlers();
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-detail').classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  window.scrollTo(0,0);
+  silentQuoteRefresh(inv.id);
+  startDetailLive();
+}
+function txRowHtml(tx,h){
+  const icon = tx.type==='buy' ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
+  return `<div class="tx-row-wrap">
+    <div class="tx-actions"><button class="edit" onclick="editTransaction('${h.id}','${tx.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg>Edit</button><button class="del" onclick="deleteTransaction('${h.id}','${tx.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>Löschen</button></div>
+    <div class="tx-row" data-tx-row>
+      <div class="tx-badge ${tx.type}">${icon}</div>
+      <div class="tx-info"><div class="tx-name">${tx.type==='buy'?'Kauf':'Verkauf'} · ${tx.quantity} Stk.</div><div class="tx-sub">${tx.date} · ${tx.price} ${h.currency}/Stk.</div></div>
+      <div class="tx-amt">${(tx.quantity*tx.price).toLocaleString('de-CH',{minimumFractionDigits:2,maximumFractionDigits:2})} ${h.currency}</div>
+      <div class="tx-kebab" onclick="event.stopPropagation(); openTxQuickMenu('${h.id}','${tx.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="19" r="1.4"/></svg></div>
+    </div></div>`;
+}
+function attachSwipeHandlers(){
+  document.querySelectorAll('[data-tx-row]').forEach(row=>{
+    let startX=0, dx=0;
+    row.addEventListener('touchstart', e=>{ startX=e.touches[0].clientX; dx=0; }, {passive:true});
+    row.addEventListener('touchmove', e=>{ dx = e.touches[0].clientX-startX; if(dx<0) row.style.transform = `translateX(${Math.max(dx,-128)}px)`; }, {passive:true});
+    row.addEventListener('touchend', ()=>{ row.style.transform = dx<-60 ? 'translateX(-128px)' : 'translateX(0)'; });
+  });
+}
+async function recordDividend(invId){
+  const inv = investments.find(i=>i.id===invId);
+  const amountStr = await promptDialog('Erhaltener Dividendenbetrag (' + inv.currency + '):', '', 'number');
+  if(amountStr===null || amountStr==='') return;
+  const amount = parseFloat(amountStr); if(isNaN(amount)||amount<=0) return;
+  inv.dividends = inv.dividends||[];
+  inv.dividends.push({id:uid(), date:todayISO(), amount});
+  persist(); openDetail(invId); showToast('Dividende erfasst');
+}
+async function createAlert(invId){
+  const inv = investments.find(i=>i.id===invId);
+  const priceStr = await promptDialog('Preisalarm für ' + inv.name + ' — bei welchem Kurs (' + inv.currency + ') benachrichtigen?', inv.currentPrice||'', 'number');
+  if(priceStr===null || priceStr==='') return;
+  const target = parseFloat(priceStr); if(isNaN(target)) return;
+  const current = inv.currentPrice || 0;
+  const direction = target >= current ? 'above' : 'below';
+  alerts.push({id:uid(), invId, targetPrice:target, direction, triggered:false, createdAt:todayISO()});
+  persist(); renderDetailAlerts(invId);
+  showToast('Preisalarm erstellt (' + (direction==='above'?'über':'unter') + ' ' + target + ' ' + inv.currency + ')');
+}
+function deleteAlert(id){ alerts = alerts.filter(a=>a.id!==id); persist(); renderDetailAlerts(currentDetailId); }
+function renderDetailAlerts(invId){
+  const el = document.getElementById('detail-alerts-list');
+  if(!el) return;
+  const inv = investments.find(i=>i.id===invId);
+  const list = alerts.filter(a=>a.invId===invId);
+  if(!list.length){ el.innerHTML = '<div class="empty" style="padding:20px 10px;"><p>Noch keine Preisalarme.</p></div>'; return; }
+  el.innerHTML = list.map(a=>`
+    <div class="alert-row">
+      <div class="alert-dot ${a.triggered?'triggered':'active'}"></div>
+      <div class="alert-info" style="flex:1;"><div class="t">${a.direction==='above'?'Über':'Unter'} ${a.targetPrice} ${inv.currency}</div><div class="s">${a.triggered?'Ausgelöst':'Aktiv'} · erstellt am ${a.createdAt}</div></div>
+      <div class="wl-btn" style="color:var(--red);" onclick="deleteAlert('${a.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></div>
+    </div>`).join('');
+}
+function checkAlerts(inv, prevPrice, newPrice){
+  const relevant = alerts.filter(a=>a.invId===inv.id && !a.triggered);
+  relevant.forEach(a=>{
+    const crossed = a.direction==='above' ? (prevPrice<a.targetPrice && newPrice>=a.targetPrice) : (prevPrice>a.targetPrice && newPrice<=a.targetPrice);
+    if(crossed){ a.triggered = true; showToast(`Preisalarm: ${inv.name} hat ${a.targetPrice} ${inv.currency} erreicht`); }
+  });
+}
+async function editCurrentPrice(){
+  const inv = investments.find(i=>i.id===currentDetailId);
+  const val = await promptDialog('Neuer aktueller Kurs (' + inv.currency + '):', inv.currentPrice||'', 'number');
+  if(val===null || val==='') return;
+  const price = parseFloat(val); if(isNaN(price)) return;
+  inv.currentPrice = price; inv.priceHistory = inv.priceHistory||[]; inv.priceHistory.push({date:todayISO(), price});
+  snapshotHistory(); persist(); openDetail(inv.id); showToast('Kurs aktualisiert');
+}
+async function refreshSinglePrice(){
+  const inv = investments.find(i=>i.id===currentDetailId);
+  showToast('Suche aktuellen Kurs…');
+  try{
+    const prompt = `Finde per Websuche den ungefähren aktuellen Kurs für "${inv.name}" (Symbol: ${inv.symbol||''}). Antworte NUR mit JSON: {"price": number}`;
+    const text = await callClaude(prompt, true);
+    const data = JSON.parse(text.replace(/```json|```/g,'').trim());
+    inv.currentPrice = data.price; inv.priceHistory = inv.priceHistory||[]; inv.priceHistory.push({date:todayISO(), price:data.price});
+    snapshotHistory(); persist(); openDetail(inv.id); showToast('Kurs aktualisiert');
+  }catch(e){ showToast('Kurs konnte nicht abgerufen werden'); }
+}
+async function deleteCurrentInvestment(){
+  closeSheet('sheet-detail-menu');
+  if(!(await confirmDialog('Dieses Investment wirklich vollständig löschen?'))) return;
+  investments = investments.filter(i=>i.id!==currentDetailId);
+  snapshotHistory(); persist(); goHome(); showToast('Investment gelöscht');
+}
+async function deleteInvestmentById(id){
+  const inv = investments.find(i=>i.id===id);
+  if(!inv) return;
+  if(!(await confirmDialog('"' + inv.name + '" wirklich löschen? Das entfernt alle Transaktionen und Kurshistorie dieser Position.'))) return;
+  investments = investments.filter(i=>i.id!==id);
+  alerts = alerts.filter(a=>a.invId!==id);
+  snapshotHistory(); persist();
+  renderHome();
+  showToast('Investment gelöscht');
+}
+async function deleteTransaction(invId, txId){
+  if(!(await confirmDialog('Transaktion löschen?'))) return;
+  const inv = investments.find(i=>i.id===invId);
+  inv.transactions = inv.transactions.filter(t=>t.id!==txId);
+  snapshotHistory(); persist();
+  if(document.getElementById('screen-detail').classList.contains('active')) openDetail(invId); else renderHistory();
+  showToast('Transaktion gelöscht');
+}
+function editTransaction(invId, txId){ const inv = investments.find(i=>i.id===invId); const tx = inv.transactions.find(t=>t.id===txId); openTxSheet(invId, tx); }
+function openTxQuickMenu(invId, txId){ window.__txMenuTarget = {invId, txId}; openSheet('sheet-tx-menu'); }
+function txMenuEdit(){ const {invId,txId} = window.__txMenuTarget; closeSheet('sheet-tx-menu'); editTransaction(invId, txId); }
+function txMenuDelete(){ const {invId,txId} = window.__txMenuTarget; closeSheet('sheet-tx-menu'); deleteTransaction(invId, txId); }
+
+/* ============ PROFILE ============ */
+function openProfileSheet(){
+  document.getElementById('p-capital').value = availableCapital || '';
+  setProfileRisk(riskTolerance, true);
+  document.getElementById('p-goal').value = investmentGoal;
+  openSheet('sheet-profile');
+}
+function setProfileRisk(risk, skipHidden){
+  document.getElementById('p-risk').value = risk;
+  document.querySelectorAll('#sheet-profile .segmented button').forEach(b=>b.classList.toggle('active', b.dataset.risk===risk));
+}
+function saveProfile(e){
+  e.preventDefault();
+  availableCapital = parseFloat(document.getElementById('p-capital').value)||0;
+  riskTolerance = document.getElementById('p-risk').value;
+  investmentGoal = document.getElementById('p-goal').value;
+  persistProfile(); closeSheet('sheet-profile');
+  if(document.getElementById('screen-home').classList.contains('active')) renderHome();
+  renderCoachProfileSummary();
+  showToast('Profil gespeichert');
+  return false;
+}
+function renderCoachProfileSummary(){
+  const el = document.getElementById('coach-profile-summary');
+  if(!el) return;
+  const riskLabel = {konservativ:'Konservativ', ausgewogen:'Ausgewogen', offensiv:'Offensiv'}[riskTolerance] || riskTolerance;
+  const full = availableCapital>0
+    ? `${fmtCHF(availableCapital)} verfügbar · Risikobereitschaft: ${riskLabel} · Ziel: ${investmentGoal}`
+    : `Noch kein verfügbares Vermögen hinterlegt · Risikobereitschaft: ${riskLabel} · Ziel: ${investmentGoal}`;
+  el.textContent = full;
+  const mini = document.getElementById('coach-profile-mini');
+  if(mini) mini.textContent = availableCapital>0 ? `${fmtCHF(availableCapital)} · ${riskLabel}` : 'Profil einrichten für personalisierte Empfehlungen';
+}
+async function generateRecommendation(){
+  const el = document.getElementById('recommendation-result');
+  if(!availableCapital || availableCapital<=0){
+    el.innerHTML = '<p style="font-size:13px; color:var(--text-faint); margin-top:12px;">Hinterlege zuerst dein verfügbares Vermögen im Profil, damit ich eine konkrete Empfehlung geben kann.</p>';
+    return;
+  }
+  el.innerHTML = '<div class="coach-loading"><div class="spinner"></div><div style="font-size:13px;">Empfehlung wird erstellt…</div></div>';
+  const list = allHoldings().filter(h=>h.qty>0);
+  const total = totalValueCHF(list);
+  const portfolioCtx = list.map(h=>({name:h.name, category:h.category, valueCHF:Math.round(h.valueCHF), weightPct: total>0 ? +((h.valueCHF/total)*100).toFixed(1) : 0}));
+  const prompt = `Du bist ein erfahrener, nüchterner Investment-Coach für einen Schweizer Privatanleger. Du gibst KEINE verbindlichen Kauf-/Verkaufsempfehlungen, sondern fundierte, nachvollziehbare Einschätzungen.
+Kontext:
+- Verfügbares investierbares Vermögen: CHF ${availableCapital}
+- Risikobereitschaft: ${riskTolerance}
+- Anlageziel: ${investmentGoal}
+- Bestehendes Portfolio (Gesamtwert CHF ${Math.round(total)}): ${JSON.stringify(portfolioCtx)}
+Gib eine konkrete, personalisierte Empfehlung: wie viel Prozent des verfügbaren Vermögens investiert werden könnte, wie viel als Reserve sinnvoll ist, und eine sinnvolle Aufteilung des zu investierenden Betrags auf Anlageklassen in Prozent (Summe 100). Erkläre kurz die Begründung passend zu Risikobereitschaft und Ziel.
+Antworte NUR mit JSON, kein Markdown:
+{"invest_pct": number, "reserve_pct": number, "allocation":[{"category":"...", "pct": number}], "summary":"2-3 Sätze", "reasoning":"3-4 Sätze"}`;
+  try{
+    const text = await callClaude(prompt);
+    const data = JSON.parse(text.replace(/```json|```/g,'').trim());
+    renderRecommendation(data);
+  }catch(e){
+    el.innerHTML = '<div class="coach-loading"><div style="font-size:13px;">Empfehlung konnte nicht erstellt werden.</div><button class="btn btn-ghost btn-sm" onclick="generateRecommendation()">Erneut versuchen</button></div>';
+  }
+}
+function renderRecommendation(data){
+  const el = document.getElementById('recommendation-result');
+  const investAmt = availableCapital*(data.invest_pct/100);
+  const reserveAmt = availableCapital*(data.reserve_pct/100);
+  el.innerHTML = `
+    <div class="stat-grid" style="margin:16px 0 14px 0;">
+      <div class="stat-box"><div class="l">Investieren</div><div class="v">${fmtCHF(investAmt)}<span style="color:var(--text-faint); font-weight:500;"> · ${data.invest_pct}%</span></div></div>
+      <div class="stat-box"><div class="l">Reserve</div><div class="v">${fmtCHF(reserveAmt)}<span style="color:var(--text-faint); font-weight:500;"> · ${data.reserve_pct}%</span></div></div>
+    </div>
+    <div style="margin-bottom:14px;">${(data.allocation||[]).map(a=>`
+      <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:5px;"><span>${a.category}</span><span class="num" style="font-weight:600;">${a.pct}%</span></div>
+      <div class="progress-track" style="margin:0 0 10px 0;"><div class="progress-fill" style="width:${a.pct}%"></div></div>`).join('')}</div>
+    <p style="font-size:13.5px; color:#d8dbe0; line-height:1.6; margin-bottom:8px;">${data.summary||''}</p>
+    <p style="font-size:12.5px; color:var(--text-faint); line-height:1.6;">${data.reasoning||''}</p>`;
+}
+
+/* ============ TRANSACTIONS ============ */
+function setTxType(type){
+  document.getElementById('tx-type').value = type;
+  document.querySelectorAll('.segmented button').forEach(b=>b.classList.remove('active'));
+  document.querySelector(`.segmented button[data-type="${type}"]`).classList.add('active');
+}
+function openTxSheet(invId, existingTx){
+  const inv = investments.find(i=>i.id===invId);
+  document.getElementById('tx-inv-id').value = invId;
+  document.getElementById('tx-sheet-title').textContent = 'Transaktion · ' + inv.name;
+  document.getElementById('tx-id').value = existingTx ? existingTx.id : '';
+  setTxType(existingTx ? existingTx.type : 'buy');
+  document.getElementById('tx-price').value = existingTx ? existingTx.price : '';
+  document.getElementById('tx-qty').value = existingTx ? existingTx.quantity : '';
+  document.getElementById('tx-date').value = existingTx ? existingTx.date : todayISO();
+  document.getElementById('tx-fees').value = existingTx ? (existingTx.fees||0) : 0;
+  document.getElementById('tx-currentprice').value = '';
+  openSheet('sheet-tx');
+}
+function saveTransaction(e){
+  e.preventDefault();
+  const invId = document.getElementById('tx-inv-id').value;
+  const inv = investments.find(i=>i.id===invId);
+  const txId = document.getElementById('tx-id').value;
+  const type = document.getElementById('tx-type').value;
+  const price = parseFloat(document.getElementById('tx-price').value)||0;
+  const quantity = parseFloat(document.getElementById('tx-qty').value)||0;
+  const date = document.getElementById('tx-date').value;
+  const fees = parseFloat(document.getElementById('tx-fees').value)||0;
+  const curPrice = document.getElementById('tx-currentprice').value;
+  if(type==='sell'){ const h = computeHolding(inv); if(quantity > h.qty + 0.0000001){ alert('Verkaufsmenge übersteigt Bestand (' + h.qty + ').'); return false; } }
+  if(txId){ const tx = inv.transactions.find(t=>t.id===txId); Object.assign(tx, {type, price, quantity, date, fees}); }
+  else{ inv.transactions.push({id:uid(), type, price, quantity, date, fees}); }
+  if(curPrice){ inv.currentPrice = parseFloat(curPrice); inv.priceHistory = inv.priceHistory||[]; inv.priceHistory.push({date:todayISO(), price:inv.currentPrice}); }
+  else if(type==='sell'){ inv.currentPrice = price; }
+  snapshotHistory(); persist(); closeSheet('sheet-tx'); e.target.reset();
+  showToast('Transaktion gespeichert');
+  if(document.getElementById('screen-detail').classList.contains('active')) openDetail(invId); else nav('home');
+  return false;
+}
+
+/* ============ ANALYTICS ============ */
+document.querySelectorAll('#breakdown-chips .chip').forEach(c=>{
+  c.addEventListener('click', ()=>{ document.querySelectorAll('#breakdown-chips .chip').forEach(x=>x.classList.remove('active')); c.classList.add('active'); currentBreakdown = c.dataset.b; renderBreakdownChart(); });
+});
+document.querySelectorAll('#index-chips .chip').forEach(c=>{
+  c.addEventListener('click', ()=>{ document.querySelectorAll('#index-chips .chip').forEach(x=>x.classList.remove('active')); c.classList.add('active'); document.getElementById('index-compare-result').innerHTML = '<button class="btn btn-ghost btn-sm" onclick="compareToIndex()">Vergleichen</button>'; });
+});
+function renderDiversificationNotes(list, total){
+  const el = document.getElementById('diversification-notes');
+  if(!list.length){ el.innerHTML = '<div class="empty"><p>Füge Investments hinzu für eine Diversifikationsanalyse.</p></div>'; return; }
+  const notes = [];
+  const sorted = [...list].sort((a,b)=>b.valueCHF-a.valueCHF);
+  const top = sorted[0];
+  const topWeight = total>0 ? (top.valueCHF/total)*100 : 0;
+  if(topWeight>25) notes.push(`Dein Portfolio ist aktuell stark auf <strong>${top.name}</strong> fokussiert (${topWeight.toFixed(0)}% des Werts) — ein Kursrückgang dieser Position würde dein Gesamtvermögen spürbar treffen.`);
+  const byCat = {}; list.forEach(h=>{byCat[h.category]=(byCat[h.category]||0)+h.valueCHF;});
+  Object.entries(byCat).forEach(([cat,val])=>{
+    const w = total>0 ? (val/total)*100 : 0;
+    if(w>50) notes.push(`Du hast ein hohes Risiko durch den grossen Anteil an <strong>${cat}</strong> (${w.toFixed(0)}%). Eine Beimischung anderer Anlageklassen könnte das Risiko besser verteilen.`);
+  });
+  const bySector = {}; list.forEach(h=>{ if(h.sector) bySector[h.sector]=(bySector[h.sector]||0)+h.valueCHF; });
+  Object.entries(bySector).forEach(([sec,val])=>{
+    const w = total>0 ? (val/total)*100 : 0;
+    if(w>50) notes.push(`Dein Portfolio ist aktuell sehr stark auf die Branche <strong>${sec}</strong> fokussiert (${w.toFixed(0)}%). Mit einem breiter gestreuten ETF könntest du dieses Branchenrisiko reduzieren.`);
+  });
+  const byCountry = {}; list.forEach(h=>{ if(h.country) byCountry[h.country]=(byCountry[h.country]||0)+h.valueCHF; });
+  Object.entries(byCountry).forEach(([c,val])=>{
+    const w = total>0 ? (val/total)*100 : 0;
+    if(w>70) notes.push(`Über ${w.toFixed(0)}% deines Portfolios liegt in <strong>${c}</strong>. Eine geografisch breitere Streuung würde Länderrisiken reduzieren.`);
+  });
+  if(list.length<5) notes.push(`Mit nur ${list.length} Position(en) ist dein Portfolio wenig diversifiziert. Mehr unabhängige Positionen reduzieren das Einzelrisiko.`);
+  if(availableCapital > total*0.5 && total>0) notes.push(`Du hältst aktuell sehr viel uninvestiertes Geld (${fmtCHF(availableCapital)}) im Verhältnis zu deinem investierten Vermögen. Nutze den KI-Coach für eine passende Aufteilung.`);
+  if(!notes.length) notes.push('Aktuell wurden keine gravierenden Konzentrationsrisiken erkannt — dein Portfolio ist solide über mehrere Positionen verteilt.');
+  el.innerHTML = notes.map((n,i)=>`<div style="font-size:13px; color:var(--text-dim); line-height:1.6; padding:10px 0; ${i<notes.length-1?'border-bottom:1px solid var(--border-soft);':''}">${n}</div>`).join('');
+}
+function renderWatchlistContent(){
+  const el = document.getElementById('watchlist-content');
+  if(!watchlist.length){ el.innerHTML = '<div class="empty"><p>Noch keine Titel auf der Watchlist.</p></div>'; return; }
+  el.innerHTML = watchlist.map(w=>{
+    const chg = w.addedPrice ? ((w.currentPrice-w.addedPrice)/w.addedPrice)*100 : 0;
+    return `<div class="wl-row">
+      <div class="holding-icon">${w.symbol.slice(0,2).toUpperCase()}</div>
+      <div class="holding-info"><div class="holding-name">${w.name}</div><div class="holding-sub">${w.category} · seit ${w.addedDate}</div></div>
+      <div class="holding-right"><div class="holding-value num">${w.currentPrice.toLocaleString('de-CH',{maximumFractionDigits:2})} ${w.currency}</div><div class="holding-change ${chg>=0?'pos':'neg'}">${fmtPct(chg)}</div></div>
+      <div class="wl-actions">
+        <div class="wl-btn" onclick="convertWatchlistToPosition('${w.id}')" title="In Portfolio übernehmen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></div>
+        <div class="wl-btn" style="color:var(--red);" onclick="removeFromWatchlist('${w.id}')" title="Entfernen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function removeFromWatchlist(id){ watchlist = watchlist.filter(w=>w.id!==id); persist(); renderWatchlistContent(); }
+function convertWatchlistToPosition(id){
+  const w = watchlist.find(x=>x.id===id);
+  selectedAsset = {symbol:w.symbol, name:w.name, category:w.category, currency:w.currency, price:w.currentPrice, livePrice:w.currentPrice};
+  document.getElementById('q-date').value = todayISO();
+  document.getElementById('q-price').value = w.currentPrice;
+  renderConfirmCard(selectedAsset);
+  document.getElementById('confirm-risk-info').innerHTML = riskInfoHtml(w.category);
+  openSheet('sheet-confirm');
+}
+async function compareToIndex(){
+  const idx = document.querySelector('#index-chips .chip.active').dataset.idx;
+  const el = document.getElementById('index-compare-result');
+  el.innerHTML = '<div class="fetch-loading"><div class="spinner"></div>Vergleiche mit ' + idx + '…</div>';
+  const list = allHoldings().filter(h=>h.qty>0);
+  const invested = list.reduce((s,h)=>s+h.investedCHF,0);
+  const gain = list.reduce((s,h)=>s+h.unrealizedCHF+h.realizedCHF,0);
+  const portfolioRet = invested!==0 ? (gain/invested)*100 : 0;
+  try{
+    const text = await callClaude(`Finde per Websuche die ungefähre Year-to-Date (YTD) Rendite in Prozent für den Index "${idx}". Antworte NUR mit JSON: {"ytd_pct": number}`, true);
+    const data = JSON.parse(text.replace(/```json|```/g,'').trim());
+    const diff = portfolioRet - data.ytd_pct;
+    el.innerHTML = `
+      <div class="stat-grid" style="margin-bottom:10px;">
+        <div class="stat-box"><div class="l">Dein Portfolio</div><div class="v" style="color:${portfolioRet>=0?'var(--green)':'var(--red)'}">${fmtPct(portfolioRet)}</div></div>
+        <div class="stat-box"><div class="l">${idx} (YTD)</div><div class="v" style="color:${data.ytd_pct>=0?'var(--green)':'var(--red)'}">${fmtPct(data.ytd_pct)}</div></div>
+      </div>
+      <p style="font-size:12.5px; color:var(--text-faint); line-height:1.5;">Du liegst aktuell ${diff>=0?'<span style="color:var(--green);">'+fmtPct(diff)+' vor</span>':'<span style="color:var(--red);">'+fmtPct(Math.abs(diff))+' hinter</span>'} dem ${idx}. Vergleich basiert auf Gesamtrendite seit Kauf vs. YTD-Indexrendite (Näherungswert per Websuche).</p>`;
+  }catch(e){
+    el.innerHTML = '<p style="font-size:13px; color:var(--text-faint);">Vergleich konnte nicht geladen werden.</p><button class="btn btn-ghost btn-sm" onclick="compareToIndex()">Erneut versuchen</button>';
+  }
+}
+function renderBreakdownChart(){
+  const list = allHoldings().filter(h=>h.qty>0);
+  destroyChart('breakdown');
+  const groups = {};
+  list.forEach(h=>{
+    let key = h[currentBreakdown];
+    if(!key || !key.trim()) key = 'Unbekannt';
+    groups[key] = (groups[key]||0) + h.valueCHF;
+  });
+  charts.breakdown = new Chart(document.getElementById('chart-breakdown'), {
+    type:'doughnut', data:{labels:Object.keys(groups), datasets:[{data:Object.values(groups), backgroundColor:CHART_COLORS, borderWidth:0}]},
+    options:{responsive:true, maintainAspectRatio:false, cutout:'62%', plugins:{legend:{position:'bottom', labels:{color:'#767c87', boxWidth:8, font:{size:10.5}, padding:10}}}}
+  });
+}
+function renderHeatmap(list, total){
+  const el = document.getElementById('portfolio-heatmap');
+  if(!list.length){ el.innerHTML = '<div class="empty" style="padding:20px 10px;"><p>Noch keine Positionen für die Heatmap.</p></div>'; return; }
+  const maxAbsRet = Math.max(...list.map(h=>Math.abs(h.retPct)), 1);
+  el.innerHTML = list.map(h=>{
+    const weightPct = total>0 ? (h.valueCHF/total)*100 : 0;
+    const flexBasis = Math.max(70, Math.sqrt(weightPct)*40);
+    const intensity = Math.min(1, Math.abs(h.retPct)/maxAbsRet);
+    const color = h.retPct>=0 ? `rgba(34,197,94,${0.25+intensity*0.6})` : `rgba(239,68,68,${0.25+intensity*0.6})`;
+    return `<div class="heatmap-tile" style="flex:1 1 ${flexBasis}px; background:${color};" onclick="openDetail('${h.id}')">
+      <div class="n">${h.name}</div>
+      <div class="p">${fmtPct(h.retPct)}</div>
+    </div>`;
+  }).join('');
+}
+function renderRiskDistribution(list, total){
+  const track = document.getElementById('risk-dist-track');
+  const legend = document.getElementById('risk-dist-legend');
+  if(!list.length){ track.innerHTML=''; legend.innerHTML = '<span style="color:var(--text-faint);">Noch keine Daten.</span>'; return; }
+  const buckets = {Niedrig:0, Mittel:0, Hoch:0};
+  const colors = {Niedrig:'#22c55e', Mittel:'#f59e0b', Hoch:'#ef4444'};
+  list.forEach(h=>{
+    const w = total>0 ? (h.valueCHF/total)*100 : 0;
+    const level = computeRiskLevel(h.category, w).label;
+    buckets[level] = (buckets[level]||0) + h.valueCHF;
+  });
+  track.innerHTML = Object.entries(buckets).filter(([,v])=>v>0).map(([level,v])=>`<div style="width:${(v/total)*100}%; background:${colors[level]};"></div>`).join('');
+  legend.innerHTML = Object.entries(buckets).map(([level,v])=>`<span><span class="dot" style="background:${colors[level]};"></span>${level} ${total>0?((v/total)*100).toFixed(0):0}%</span>`).join('');
+}
+function renderAnalytics(){
+  const list = allHoldings().filter(h=>h.qty>0);
+  const total = totalValueCHF(list);
+  renderBreakdownChart();
+  renderDiversificationNotes(list, total);
+  renderWatchlistContent();
+  renderPersonalInsights(list, total);
+  renderRegionBreakdown(list, total);
+  renderBehaviorAnalysis();
+  renderHeatmap(list, total);
+  renderRiskDistribution(list, total);
+  const invested = list.reduce((s,h)=>s+h.investedCHF,0);
+  const realized = list.reduce((s,h)=>s+h.realizedCHF,0);
+  const gain = list.reduce((s,h)=>s+h.unrealizedCHF+h.realizedCHF,0);
+  const retPct = invested!==0 ? (gain/invested)*100 : 0;
+  const divIncome = list.reduce((s,h)=>s+h.valueCHF*((h.dividendYield||0)/100),0);
+  document.getElementById('a-invested').textContent = fmtCHF(invested);
+  document.getElementById('a-return').textContent = fmtPct(retPct);
+  document.getElementById('a-realized').textContent = fmtCHF(realized);
+  document.getElementById('a-div').textContent = fmtCHF(divIncome);
+  const divReceivedTotal = list.reduce((s,h)=>{ const inv = investments.find(i=>i.id===h.id); const fx = FX_TO_CHF[h.currency]||1; return s + ((inv.dividends||[]).reduce((s2,d)=>s2+d.amount,0)*fx); },0);
+  document.getElementById('a-div-received').textContent = fmtCHF(divReceivedTotal);
+
+  const rowHtml = (h)=>`<div class="holding-row" onclick="openDetail('${h.id}')">
+      <div class="holding-icon">${(h.symbol||h.name).slice(0,2).toUpperCase()}</div>
+      <div class="holding-info"><div class="holding-name">${h.name}</div><div class="holding-sub">${h.category}</div></div>
+      <div class="holding-right"><div class="holding-change ${h.retPct>=0?'pos':'neg'}">${fmtPct(h.retPct)}</div></div>
+    </div>`;
+  destroyChart('topflop');
+  if(!list.length){ document.getElementById('topflop-list').innerHTML = '<div class="empty"><p>Keine aktiven Positionen.</p></div>'; }
+  else{
+    const sorted = [...list].sort((a,b)=>b.retPct-a.retPct);
+    document.getElementById('topflop-list').innerHTML =
+      '<div class="section-title" style="margin-bottom:6px;">Top Performer</div>' + sorted.slice(0,3).map(rowHtml).join('') +
+      '<div class="section-title" style="margin:14px 0 6px 0;">Flop Performer</div>' + sorted.slice(-3).reverse().map(rowHtml).join('');
+    const chartData = [...sorted.slice(0,3), ...sorted.slice(-3).reverse()].filter((h,i,arr)=>arr.findIndex(x=>x.id===h.id)===i);
+    charts.topflop = new Chart(document.getElementById('chart-topflop'), {
+      type:'bar',
+      data:{labels:chartData.map(h=>h.name), datasets:[{data:chartData.map(h=>+h.retPct.toFixed(1)), backgroundColor:chartData.map(h=>h.retPct>=0?'#22c55e':'#ef4444'), borderRadius:4}]},
+      options:{responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}},
+        scales:{x:{ticks:{color:'#3d4149', font:{size:10}}, grid:{color:'#161820'}}, y:{ticks:{color:'#9aa0a8', font:{size:10.5}}, grid:{display:false}}}}
+    });
+  }
+
+  document.getElementById('scenario-list').innerHTML = STRESS_SCENARIOS.map(sc=>{
+    let projected = 0;
+    list.forEach(h=>{ const shock = sc.shocks[h.category] ?? -15; projected += h.valueCHF * (1+shock/100); });
+    const delta = projected - total;
+    const deltaPct = total!==0 ? (delta/total)*100 : 0;
+    return `<div class="scenario-card">
+      <div class="scenario-top"><div><div class="scenario-name">${sc.name}</div><div class="scenario-desc">${sc.desc}</div></div></div>
+      <div class="scenario-result"><span style="color:var(--text-faint);">Projizierter Wert</span><span class="num" style="font-weight:700;">${fmtCHF(projected)} <span style="color:${deltaPct>=0?'var(--green)':'var(--red)'}">(${fmtPct(deltaPct)})</span></span></div>
+    </div>`;
+  }).join('');
+}
+
+/* ============ MORE: GOALS ============ */
+function openGoalSheet(){
+  document.getElementById('goal-suggestion-chips').innerHTML = GOAL_SUGGESTIONS.map(g=>`<div class="chip" onclick="prefillGoal('${g.name.replace(/'/g,"\\'")}', ${g.target})">${g.name}</div>`).join('');
+  openSheet('sheet-goal');
+}
+function prefillGoal(name, target){
+  document.getElementById('g-name').value = name;
+  document.getElementById('g-target').value = target;
+}
+function saveGoal(e){
+  e.preventDefault();
+  goals.push({id:uid(), name:document.getElementById('g-name').value.trim(), target:parseFloat(document.getElementById('g-target').value)||0,
+    monthly:parseFloat(document.getElementById('g-monthly').value)||0, returnPct:parseFloat(document.getElementById('g-return').value)||0});
+  persist(); closeSheet('sheet-goal'); e.target.reset(); renderMore(); showToast('Ziel hinzugefügt');
+  return false;
+}
+function deleteGoal(id){ goals = goals.filter(g=>g.id!==id); persist(); renderMore(); }
+function monthsToTarget(current, target, monthly, annualReturn){
+  if(current>=target) return 0;
+  const r = annualReturn/100/12;
+  if(monthly<=0 && r<=0) return Infinity;
+  let val = current, months=0;
+  while(val < target && months < 1200){ val = val*(1+r) + monthly; months++; }
+  return months;
+}
+function goalCardHtml(g, total){
+  const pct = Math.max(0, Math.min(100, (total/(g.target||1))*100));
+  const months = monthsToTarget(total, g.target, g.monthly, g.returnPct);
+  const monthsLabel = months===Infinity ? 'nie bei aktueller Sparrate' : months===0 ? 'bereits erreicht' : `in ~${Math.ceil(months/12*10)/10} Jahren`;
+  return `<div class="card goal-card">
+      <div class="goal-top"><div class="goal-name">${g.name}</div><div class="link-sm" style="color:var(--red);" onclick="deleteGoal('${g.id}')">Löschen</div></div>
+      <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+      <div class="goal-meta"><span class="num">${fmtCHF(total)}</span><span class="num">${pct.toFixed(0)}% von ${fmtCHF(g.target)}</span></div>
+      <div style="font-size:12px; color:var(--text-faint); margin-top:8px;">Bei CHF ${g.monthly}/Monat & ${g.returnPct}% Rendite: ${monthsLabel}</div>
+    </div>`;
+}
+function renderHomeGoals(total){
+  const section = document.getElementById('home-goals-section');
+  if(!goals.length){
+    section.innerHTML = `<div class="section-head"><div class="section-title">Ziele & Fortschritt</div><div class="link-sm" onclick="nav('more'); openGoalSheet();">+ Ziel setzen</div></div><div class="card" style="font-size:13px; color:var(--text-faint);">Noch kein Ziel festgelegt. Tippe auf "+ Ziel setzen", um deinen Fortschritt zu verfolgen.</div>`;
+    return;
+  }
+  section.innerHTML = `<div class="section-head"><div class="section-title">Ziele & Fortschritt</div><div class="link-sm" onclick="nav('more')">Alle ansehen</div></div>` + goals.slice(0,2).map(g=>goalCardHtml(g,total)).join('');
+}
+function renderMore(){
+  const total = totalValueCHF(allHoldings());
+  document.getElementById('goals-empty').classList.toggle('hidden', goals.length>0);
+  document.getElementById('goals-list').innerHTML = goals.map(g=>goalCardHtml(g,total)).join('');
+  renderMilestones(total);
+  renderTimeline();
+  renderHistory();
+  renderAlertsOverview();
+  renderTaxOverview();
+  renderLexikon();
+  renderBrokerList();
+  const ts = getLastRefreshTs();
+  const lastText = ts ? new Date(ts).toLocaleString('de-CH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : 'noch nicht';
+  document.getElementById('last-refresh').textContent = investments.length ? `Kurse zuletzt aktualisiert: ${lastText} · Automatische Aktualisierung alle 15 Min. bei geöffneter App` : 'Alle Daten lokal gespeichert · Compound';
+}
+function renderAlertsOverview(){
+  const el = document.getElementById('alerts-overview-list');
+  if(!alerts.length){ el.innerHTML = '<div class="empty"><p>Noch keine Preisalarme erstellt. Lege sie in der Detailansicht einer Position an.</p></div>'; return; }
+  const sorted = [...alerts].sort((a,b)=> (a.triggered - b.triggered) || b.createdAt.localeCompare(a.createdAt));
+  el.innerHTML = sorted.map(a=>{
+    const inv = investments.find(i=>i.id===a.invId);
+    if(!inv) return '';
+    return `<div class="alert-row">
+      <div class="alert-dot ${a.triggered?'triggered':'active'}"></div>
+      <div class="alert-info" style="flex:1;"><div class="t">${inv.name} — ${a.direction==='above'?'über':'unter'} ${a.targetPrice} ${inv.currency}</div><div class="s">${a.triggered?'Ausgelöst':'Aktiv'} · erstellt am ${a.createdAt}</div></div>
+      <div class="wl-btn" style="color:var(--red);" onclick="deleteAlert('${a.id}'); renderAlertsOverview();"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></div>
+    </div>`;
+  }).join('');
+}
+function renderTaxOverview(){
+  const el = document.getElementById('tax-overview');
+  const byYear = {};
+  investments.forEach(inv=>{
+    const fx = FX_TO_CHF[inv.currency]||1;
+    let qty=0, costBasis=0;
+    [...(inv.transactions||[])].sort((a,b)=>a.date.localeCompare(b.date)).forEach(tx=>{
+      const year = tx.date.slice(0,4);
+      byYear[year] = byYear[year] || {realized:0, dividends:0};
+      if(tx.type==='buy'){ costBasis += tx.quantity*tx.price + (tx.fees||0); qty += tx.quantity; }
+      else{
+        const avg = qty>0 ? costBasis/qty : 0;
+        const proceeds = tx.quantity*tx.price - (tx.fees||0);
+        const realizedGain = (proceeds - avg*tx.quantity) * fx;
+        byYear[year].realized += realizedGain;
+        costBasis -= avg*tx.quantity; qty -= tx.quantity;
+      }
+    });
+    (inv.dividends||[]).forEach(d=>{
+      const year = d.date.slice(0,4);
+      byYear[year] = byYear[year] || {realized:0, dividends:0};
+      byYear[year].dividends += d.amount*fx;
+    });
+  });
+  const years = Object.keys(byYear).sort((a,b)=>b.localeCompare(a));
+  if(!years.length){ el.innerHTML = '<div class="empty"><p>Noch keine steuerrelevanten Ereignisse erfasst.</p></div>'; return; }
+  el.innerHTML = years.map(y=>`
+    <div class="tax-year-card">
+      <div class="tax-year-title">${y}</div>
+      <div class="tax-row"><span>Realisierte Gewinne/Verluste</span><span class="num" style="color:${byYear[y].realized>=0?'var(--green)':'var(--red)'}">${fmtCHF(byYear[y].realized)}</span></div>
+      <div class="tax-row"><span>Erhaltene Dividenden</span><span class="num">${fmtCHF(byYear[y].dividends)}</span></div>
+    </div>`).join('');
+}
+function renderLexikon(){
+  const el = document.getElementById('lexikon-list');
+  if(el.dataset.rendered) return;
+  el.innerHTML = LEXIKON.map(l=>`<details class="acc-item"><summary>${l.term}</summary><p>${l.def}</p></details>`).join('');
+  el.dataset.rendered = '1';
+}
+function renderBrokerList(){
+  const el = document.getElementById('broker-list');
+  const list = BROKERS_DB[currentBrokerCountry] || [];
+  el.innerHTML = list.map(b=>`
+    <div class="broker-card">
+      <div class="broker-top"><div class="broker-name">${b.name}</div><div class="broker-tag">${b.level}</div></div>
+      <div style="font-size:12.5px; color:var(--text-dim); margin-bottom:4px;"><strong>Geeignet für:</strong> ${b.assets}</div>
+      <div class="broker-row"><span>Vorteile</span><span style="text-align:right; max-width:60%;">${b.pros}</span></div>
+      <div class="broker-row"><span>Nachteile</span><span style="text-align:right; max-width:60%;">${b.cons}</span></div>
+      <div class="broker-row"><span>Gebühren</span><span>${b.fees}</span></div>
+      <div class="broker-row"><span>Sicherheit</span><span style="text-align:right; max-width:60%;">${b.security}</span></div>
+      <a class="broker-link" href="${b.url}" target="_blank" rel="noopener">Zur Website →</a>
+    </div>`).join('');
+}
+/* ============ WARUM? EXPLANATIONS ============ */
+async function explainWhy(kind){
+  document.getElementById('why-content').innerHTML = '<div class="insight-loading"><div class="spinner"></div>Wird analysiert…</div>';
+  openSheet('sheet-why');
+  const list = allHoldings().filter(h=>h.qty>0);
+  const total = totalValueCHF(list);
+  let title = 'Warum?', prompt = '';
+  if(kind==='today'){
+    title = 'Warum hat sich mein Portfolio heute bewegt?';
+    const contributors = list.map(h=>{
+      const hist = h.priceHistory||[];
+      const last2 = hist.slice(-2);
+      const pctChange = last2.length===2 && last2[0].price!==0 ? ((last2[1].price-last2[0].price)/last2[0].price)*100 : 0;
+      const impactCHF = h.valueCHF * (pctChange/100);
+      return {name:h.name, category:h.category, pctChange:+pctChange.toFixed(2), impactCHF:Math.round(impactCHF), weightPct:+((h.valueCHF/total)*100).toFixed(1)};
+    }).sort((a,b)=>Math.abs(b.impactCHF)-Math.abs(a.impactCHF)).slice(0,5);
+    prompt = `Du bist ein nüchterner Investment-Analyst. Hier sind die Positionen mit dem grössten geschätzten Einfluss auf die heutige Portfolio-Bewegung (basierend auf zuletzt erfassten Kursänderungen): ${JSON.stringify(contributors)}. Erkläre in maximal 4 kurzen, konkreten deutschen Sätzen, welche Positionen die heutige Bewegung am meisten beeinflusst haben. Falls die Datenbasis dünn ist, erwähne das kurz. Antworte NUR mit Fliesstext, kein JSON.`;
+  } else if(kind==='diversification'){
+    title = 'Warum diese Diversifikations-Einschätzung?';
+    const byCat = {}; list.forEach(h=>{byCat[h.category]=(byCat[h.category]||0)+h.valueCHF;});
+    const catBreakdown = Object.entries(byCat).map(([c,v])=>({category:c, weightPct:total>0?+((v/total)*100).toFixed(1):0}));
+    prompt = `Du bist ein nüchterner Investment-Analyst. Hier ist die Kategorie-Aufteilung eines Portfolios: ${JSON.stringify(catBreakdown)}, Anzahl Positionen: ${list.length}. Erkläre in maximal 4 kurzen deutschen Sätzen, was diese Verteilung über die Diversifikation aussagt und was der grösste Hebel zur Verbesserung wäre. Antworte NUR mit Fliesstext, kein JSON.`;
+  } else if(kind==='risk'){
+    title = 'Warum hat sich mein Risiko verändert?';
+    const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate()-7);
+    const weekAgoStr = weekAgo.toISOString().slice(0,10);
+    const past = healthHistory.filter(h=>h.date<=weekAgoStr);
+    const prevEntry = past.length ? past[past.length-1] : null;
+    const current = window.__healthScores || {health:0,riskScore:0,divScore:0};
+    prompt = `Du bist ein nüchterner Investment-Analyst. Der aktuelle Risiko-Score ist ${current.riskScore}/100 und der Diversifikations-Score ${current.divScore}/100. ${prevEntry ? `Vor etwa 7 Tagen lag der Risiko-Score bei ${prevEntry.riskScore}/100 und Diversifikation bei ${prevEntry.divScore}/100.` : 'Es liegen noch keine Vergleichsdaten von vor 7 Tagen vor.'} Erkläre in maximal 3 kurzen deutschen Sätzen, wodurch sich der Risiko-Score verändert haben könnte (z.B. Konzentration, Kursbewegungen, neue Positionen). Antworte NUR mit Fliesstext, kein JSON.`;
+  }
+  try{
+    document.getElementById('why-title').textContent = title;
+    const text = await callClaude(prompt);
+    document.getElementById('why-content').innerHTML = `<p style="font-size:14px; line-height:1.6; color:#d8dbe0;">${text.trim()}</p>`;
+  }catch(e){
+    document.getElementById('why-content').innerHTML = '<p style="font-size:13px; color:var(--text-faint);">Erklärung konnte nicht geladen werden.</p>';
+  }
+}
+
+/* ============ MARKTSTATUS ============ */
+function getExchangeStatus(ex){
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat('en-US',{timeZone:ex.tz, hour:'2-digit',minute:'2-digit',hour12:false,weekday:'short'}).formatToParts(now);
+  const weekday = parts.find(p=>p.type==='weekday').value;
+  const hour = parseInt(parts.find(p=>p.type==='hour').value);
+  const minute = parseInt(parts.find(p=>p.type==='minute').value);
+  const daysMap = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const dayIdx = daysMap.indexOf(weekday);
+  const isWeekday = dayIdx>=1 && dayIdx<=5;
+  const minutesNow = hour*60+minute;
+  const openMin = ex.open[0]*60+ex.open[1], closeMin = ex.close[0]*60+ex.close[1];
+  const isOpen = isWeekday && minutesNow>=openMin && minutesNow<closeMin;
+  const fmtMins = (m)=>{ if(m>=1440) return Math.floor(m/1440)+'T '+Math.floor((m%1440)/60)+'Std'; if(m>=60) return Math.floor(m/60)+'Std '+(m%60)+'Min'; return m+'Min'; };
+  if(isOpen) return {open:true, text:'Schliesst in ' + fmtMins(closeMin-minutesNow)};
+  let addDays;
+  if(minutesNow < openMin && isWeekday){ addDays = 0; }
+  else{
+    addDays = 1; let d = (dayIdx+1)%7;
+    while(d===0||d===6){ addDays++; d=(d+1)%7; }
+  }
+  const minsUntil = addDays*24*60 - minutesNow + openMin;
+  return {open:false, text:'Öffnet in ' + fmtMins(minsUntil)};
+}
+function renderMarketStatus(){
+  const el = document.getElementById('market-status-list');
+  if(!el) return;
+  const rows = EXCHANGES.map(ex=>{
+    const st = getExchangeStatus(ex);
+    return `<div class="market-row"><div class="market-status-dot ${st.open?'open':'closed'}"></div><div class="market-name">${ex.name}</div><div class="market-countdown">${st.text}</div></div>`;
+  });
+  rows.push(`<div class="market-row"><div class="market-status-dot open"></div><div class="market-name">Krypto-Markt</div><div class="market-countdown">Durchgehend geöffnet</div></div>`);
+  el.innerHTML = rows.join('');
+}
+setInterval(()=>{ if(document.getElementById('screen-home').classList.contains('active')) renderMarketStatus(); }, 60000);
+
+/* ============ TIMELINE ============ */
+function generateTimeline(){
+  const events = [];
+  const allTx = investments.flatMap(inv=>(inv.transactions||[]).map(tx=>({...tx, invName:inv.name})));
+  if(allTx.length){
+    const firstBuy = [...allTx].filter(t=>t.type==='buy').sort((a,b)=>a.date.localeCompare(b.date))[0];
+    if(firstBuy) events.push({date:firstBuy.date, title:'Erstes Investment', desc:firstBuy.invName, type:'start'});
+  }
+  const allDivs = investments.flatMap(inv=>(inv.dividends||[]).map(d=>({...d, invName:inv.name})));
+  if(allDivs.length){
+    const firstDiv = [...allDivs].sort((a,b)=>a.date.localeCompare(b.date))[0];
+    events.push({date:firstDiv.date, title:'Erste Dividende', desc:firstDiv.invName, type:'dividend'});
+  }
+  allTx.forEach(tx=>{
+    const amt = tx.quantity*tx.price;
+    events.push({date:tx.date, title:(tx.type==='buy'?'Kauf':'Verkauf')+': '+tx.invName, desc: amt.toLocaleString('de-CH',{maximumFractionDigits:0})+' '+ (investments.find(i=>i.name===tx.invName)?.currency||''), type:tx.type});
+  });
+  if(portfolioHistory.length){
+    let runningMax = -Infinity;
+    portfolioHistory.forEach(h=>{ if(h.value>runningMax){ runningMax=h.value; events.push({date:h.date, title:'Neues Allzeithoch', desc:fmtCHF(h.value), type:'ath'}); } });
+    let bestDay=null, worstDay=null;
+    for(let i=1;i<portfolioHistory.length;i++){
+      const delta = portfolioHistory[i].value - portfolioHistory[i-1].value;
+      if(!bestDay || delta>bestDay.delta) bestDay = {date:portfolioHistory[i].date, delta};
+      if(!worstDay || delta<worstDay.delta) worstDay = {date:portfolioHistory[i].date, delta};
+    }
+    if(bestDay && bestDay.delta>0) events.push({date:bestDay.date, title:'Größter Tagesgewinn', desc:fmtCHF(bestDay.delta), type:'best'});
+    if(worstDay && worstDay.delta<0) events.push({date:worstDay.date, title:'Größter Tagesverlust', desc:fmtCHF(worstDay.delta), type:'worst'});
+  }
+  MILESTONE_THRESHOLDS.forEach(t=>{
+    const entry = portfolioHistory.find(h=>h.value>=t);
+    if(entry) events.push({date:entry.date, title:'Ziel erreicht: CHF '+t.toLocaleString('de-CH'), desc:'Portfoliowert überschritten', type:'goal'});
+  });
+  const dedup = {}; events.forEach(e=>{ const k=e.date+e.title; dedup[k]=e; });
+  return Object.values(dedup).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,30);
+}
+const TIMELINE_ICONS = {
+  start:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4z"/></svg>',
+  dividend:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M8 10h8M8 14h8"/></svg>',
+  buy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>',
+  sell:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
+  ath:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/></svg>',
+  best:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
+  worst:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>',
+  goal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>'
+};
+function renderTimeline(){
+  const el = document.getElementById('timeline-list');
+  const events = generateTimeline();
+  if(!events.length){ el.innerHTML = '<div class="empty"><p>Noch keine Ereignisse. Deine Timeline füllt sich automatisch.</p></div>'; return; }
+  el.innerHTML = events.map(e=>`
+    <div class="timeline-row">
+      <div class="timeline-dot">${TIMELINE_ICONS[e.type]||''}</div>
+      <div class="timeline-info"><div class="t">${e.title}</div><div class="s">${e.desc}</div><div class="d">${e.date}</div></div>
+    </div>`).join('');
+}
+
+/* ============ PERSÖNLICHE INSIGHTS (regelbasiert) ============ */
+function renderPersonalInsights(list, total){
+  const el = document.getElementById('personal-insights-list');
+  if(!list.length){ el.innerHTML = '<div class="empty"><p>Noch keine Daten für Insights.</p></div>'; return; }
+  const insights = [];
+  const byCat = {}; list.forEach(h=>{byCat[h.category]=(byCat[h.category]||0)+h.valueCHF;});
+  const topCat = Object.entries(byCat).sort((a,b)=>b[1]-a[1])[0];
+  if(topCat && total>0){ const w=(topCat[1]/total)*100; if(w>40) insights.push(`Deine ${topCat[0]}-Positionen machen inzwischen ${w.toFixed(0)}% deines Vermögens aus.`); }
+  const sorted = [...list].sort((a,b)=>b.valueCHF-a.valueCHF);
+  const top3Weight = total>0 ? (sorted.slice(0,3).reduce((s,h)=>s+h.valueCHF,0)/total)*100 : 0;
+  if(sorted.length>=3) insights.push(`Deine drei größten Positionen machen ${top3Weight.toFixed(0)}% deines Portfolios aus.`);
+  const totalGain = list.reduce((s,h)=>s+h.unrealizedCHF+h.realizedCHF,0);
+  if(totalGain>0){
+    const topGainer = [...list].sort((a,b)=>(b.unrealizedCHF+b.realizedCHF)-(a.unrealizedCHF+a.realizedCHF))[0];
+    const gainShare = ((topGainer.unrealizedCHF+topGainer.realizedCHF)/totalGain)*100;
+    if(gainShare>60) insights.push(`Deine Rendite stammt hauptsächlich aus ${topGainer.name} (${gainShare.toFixed(0)}% deines Gesamtgewinns).`);
+  }
+  if(healthHistory.length>=2){
+    const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate()-7);
+    const weekAgoStr = weekAgo.toISOString().slice(0,10);
+    const past = healthHistory.filter(h=>h.date<=weekAgoStr);
+    if(past.length){
+      const prev = past[past.length-1];
+      const cur = healthHistory[healthHistory.length-1];
+      if(cur.divScore > prev.divScore+3) insights.push('Deine Diversifikation hat sich in der letzten Woche verbessert.');
+      else if(cur.divScore < prev.divScore-3) insights.push('Deine Diversifikation hat sich in der letzten Woche verschlechtert.');
+    }
+  }
+  if(portfolioHistory.length>=14){
+    const recent = portfolioHistory.slice(-7), prior = portfolioHistory.slice(-14,-7);
+    const stdev = (arr)=>{ const rets=[]; for(let i=1;i<arr.length;i++){ if(arr[i-1].value!==0) rets.push((arr[i].value-arr[i-1].value)/arr[i-1].value); } const mean=rets.reduce((a,b)=>a+b,0)/(rets.length||1); const variance=rets.reduce((a,b)=>a+(b-mean)**2,0)/(rets.length||1); return Math.sqrt(variance); };
+    const recentVol = stdev(recent), priorVol = stdev(prior);
+    if(priorVol>0){ if(recentVol<priorVol*0.7) insights.push('Dein Portfolio ist diese Woche spürbar weniger volatil als letzte Woche.'); else if(recentVol>priorVol*1.3) insights.push('Dein Portfolio schwankt diese Woche stärker als letzte Woche.'); }
+  }
+  if(!insights.length) insights.push('Noch nicht genug Daten für individuelle Insights — sie erscheinen automatisch, sobald mehr Portfoliohistorie vorliegt.');
+  el.innerHTML = insights.map((n,i)=>`<div style="font-size:13px; color:var(--text-dim); line-height:1.6; padding:10px 0; ${i<insights.length-1?'border-bottom:1px solid var(--border-soft);':''}">${n}</div>`).join('');
+}
+
+/* ============ REGIONEN & LÄNDER ============ */
+function renderRegionBreakdown(list, total){
+  const el = document.getElementById('region-breakdown');
+  const tagged = list.filter(h=>h.country && h.country.trim());
+  if(!tagged.length){ el.innerHTML = '<div class="empty"><p>Noch keine Länder hinterlegt. Füge beim Investment ein Land hinzu (unter "Mehr Details"), um diese Ansicht zu füllen.</p></div>'; return; }
+  const byContinent = {}; const byCountry = {};
+  tagged.forEach(h=>{ const cont = CONTINENT_MAP[h.country] || 'Andere'; byContinent[cont]=(byContinent[cont]||0)+h.valueCHF; byCountry[h.country]=(byCountry[h.country]||0)+h.valueCHF; });
+  const taggedTotal = tagged.reduce((s,h)=>s+h.valueCHF,0);
+  const contColors = {'Europa':'#60a5fa','Nordamerika':'#22c55e','Asien':'#f59e0b','Global':'#a78bfa','Andere':'#7d8590'};
+  const barSegments = Object.entries(byContinent).map(([c,v])=>`<div style="width:${(v/taggedTotal)*100}%; background:${contColors[c]||'#7d8590'};"></div>`).join('');
+  const legend = Object.entries(byContinent).sort((a,b)=>b[1]-a[1]).map(([c,v])=>`<span style="font-size:11.5px; color:var(--text-dim); margin-right:12px;"><span style="display:inline-block; width:8px; height:8px; border-radius:2px; background:${contColors[c]||'#7d8590'}; margin-right:5px;"></span>${c} ${((v/taggedTotal)*100).toFixed(0)}%</span>`).join('');
+  const countryRows = Object.entries(byCountry).sort((a,b)=>b[1]-a[1]).map(([c,v])=>{
+    const w = (v/taggedTotal)*100;
+    return `<div class="region-country-row"><span>${FLAG_EMOJI[c]||'🏳️'} ${c}</span><span class="num">${w.toFixed(1)}%</span></div>`;
+  }).join('');
+  el.innerHTML = `<div class="region-bar-track">${barSegments}</div><div style="margin-bottom:16px;">${legend}</div>${countryRows}`;
+}
+
+/* ============ INVESTMENT-VERHALTEN ============ */
+function renderBehaviorAnalysis(){
+  const el = document.getElementById('behavior-analysis');
+  const allBuys = investments.flatMap(i=>(i.transactions||[]).filter(t=>t.type==='buy'));
+  const allSells = investments.flatMap(i=>(i.transactions||[]).filter(t=>t.type==='sell'));
+  if(allBuys.length<3){ el.innerHTML = '<div class="empty"><p>Noch nicht genug Transaktionen für eine Verhaltensanalyse (mind. 3 Käufe empfohlen).</p></div>'; return; }
+  const notes = [];
+  notes.push(`Du hast bisher ${allBuys.length} Kauf${allBuys.length===1?'':'käufe'} und ${allSells.length} Verkauf${allSells.length===1?'':'verkäufe'} getätigt.`);
+  const earlyMonth = allBuys.filter(t=>parseInt(t.date.slice(8,10))<=10).length;
+  if(earlyMonth/allBuys.length>0.6) notes.push('Deine Käufe erfolgen meist am Monatsanfang.');
+  const byCat = {}; investments.forEach(i=>{ (i.transactions||[]).filter(t=>t.type==='buy').forEach(()=>{ byCat[i.category]=(byCat[i.category]||0)+1; }); });
+  const topCat = Object.entries(byCat).sort((a,b)=>b[1]-a[1])[0];
+  if(topCat && topCat[1]/allBuys.length>0.5) notes.push(`Du investierst hauptsächlich in ${topCat[0]} (${Math.round(topCat[1]/allBuys.length*100)}% deiner Käufe).`);
+  const holdingDays = investments.map(inv=>{
+    const txs = [...(inv.transactions||[])].sort((a,b)=>a.date.localeCompare(b.date));
+    if(!txs.length) return null;
+    const start = new Date(txs[0].date);
+    const lastSell = [...txs].reverse().find(t=>t.type==='sell');
+    const end = lastSell ? new Date(lastSell.date) : new Date();
+    return Math.floor((end-start)/(1000*60*60*24));
+  }).filter(d=>d!==null && d>=0);
+  if(holdingDays.length){
+    const avgDays = holdingDays.reduce((a,b)=>a+b,0)/holdingDays.length;
+    if(avgDays>365) notes.push(`Du hältst Positionen im Schnitt ${(avgDays/365).toFixed(1)} Jahre.`);
+    else notes.push(`Du hältst Positionen im Schnitt ${Math.round(avgDays)} Tage.`);
+  }
+  if(allSells.length>=2){
+    let lossSells = 0;
+    investments.forEach(inv=>{
+      let qty=0, costBasis=0;
+      [...(inv.transactions||[])].sort((a,b)=>a.date.localeCompare(b.date)).forEach(tx=>{
+        if(tx.type==='buy'){ costBasis+=tx.quantity*tx.price+(tx.fees||0); qty+=tx.quantity; }
+        else{ const avg = qty>0?costBasis/qty:0; if(tx.price<avg) lossSells++; costBasis-=avg*tx.quantity; qty-=tx.quantity; }
+      });
+    });
+    const lossShare = (lossSells/allSells.length)*100;
+    if(lossShare>40) notes.push(`${lossShare.toFixed(0)}% deiner Verkäufe erfolgten mit Verlust gegenüber deinem Einstandspreis.`);
+  }
+  el.innerHTML = notes.map((n,i)=>`<div style="font-size:13px; color:var(--text-dim); line-height:1.6; padding:10px 0; ${i<notes.length-1?'border-bottom:1px solid var(--border-soft);':''}">${n}</div>`).join('');
+}
+
+function renderMilestones(total){
+  const valueMilestones = MILESTONE_THRESHOLDS.map(t=>{
+    const done = total>=t;
+    let achievedDate = null;
+    if(done){ const entry = portfolioHistory.find(h=>h.value>=t); achievedDate = entry ? entry.date : todayISO(); }
+    const icon = done ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/></svg>';
+    return `<div class="milestone-row">
+      <div class="milestone-dot ${done?'done':'pending'}">${icon}</div>
+      <div class="milestone-info"><div class="t">CHF ${t.toLocaleString('de-CH')} Portfoliowert</div><div class="s">${done ? 'Erreicht am '+achievedDate : 'Noch '+fmtCHF(t-total)+' entfernt'}</div></div>
+    </div>`;
+  });
+  const allTx = investments.flatMap(i=>i.transactions||[]).filter(t=>t.type==='buy');
+  const totalInvestedEver = allTx.reduce((s,t)=>s+t.quantity*t.price,0);
+  const firstInvestedDone = totalInvestedEver>=1000;
+  const firstInvestedIcon = firstInvestedDone ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/></svg>';
+  const firstInvestedRow = `<div class="milestone-row">
+    <div class="milestone-dot ${firstInvestedDone?'done':'pending'}">${firstInvestedIcon}</div>
+    <div class="milestone-info"><div class="t">Erste CHF 1'000 investiert</div><div class="s">${firstInvestedDone?'Erreicht':'Noch '+fmtCHF(1000-totalInvestedEver)+' entfernt'}</div></div>
+  </div>`;
+  let yearRow = '';
+  if(allTx.length){
+    const earliest = allTx.map(t=>t.date).sort()[0];
+    const daysSince = Math.floor((Date.now() - new Date(earliest).getTime())/(1000*60*60*24));
+    const yearDone = daysSince>=365;
+    const yearIcon = yearDone ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/></svg>';
+    yearRow = `<div class="milestone-row">
+      <div class="milestone-dot ${yearDone?'done':'pending'}">${yearIcon}</div>
+      <div class="milestone-info"><div class="t">Ein Jahr kontinuierlich investiert</div><div class="s">${yearDone?'Seit '+earliest+' investiert':'Noch '+(365-daysSince)+' Tage'}</div></div>
+    </div>`;
+  }
+  document.getElementById('milestones-list').innerHTML = firstInvestedRow + yearRow + valueMilestones.join('');
+}
+function checkMilestones(){ /* recalculated live in renderMilestones on render */ }
+
+/* ============ HISTORY (in Mehr) ============ */
+document.querySelectorAll('#hist-filters .chip').forEach(c=>{
+  c.addEventListener('click', ()=>{ document.querySelectorAll('#hist-filters .chip').forEach(x=>x.classList.remove('active')); c.classList.add('active'); historyFilter = c.dataset.f; renderHistory(); });
+});
+document.querySelectorAll('#broker-country-chips .chip').forEach(c=>{
+  c.addEventListener('click', ()=>{ document.querySelectorAll('#broker-country-chips .chip').forEach(x=>x.classList.remove('active')); c.classList.add('active'); currentBrokerCountry = c.dataset.country; renderBrokerList(); });
+});
+function renderHistory(){
+  let rows = [];
+  investments.forEach(inv=>(inv.transactions||[]).forEach(tx=>rows.push({...tx, invName:inv.name, invSymbol:inv.symbol, invId:inv.id, currency:inv.currency})));
+  if(historyFilter!=='all') rows = rows.filter(r=>r.type===historyFilter);
+  rows.sort((a,b)=>b.date.localeCompare(a.date));
+  document.getElementById('history-empty').classList.toggle('hidden', rows.length>0);
+  document.getElementById('history-list').innerHTML = rows.map(tx=>{
+    const icon = tx.type==='buy' ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
+    return `<div class="tx-row-wrap">
+      <div class="tx-actions"><button class="edit" onclick="editTransaction('${tx.invId}','${tx.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg>Edit</button><button class="del" onclick="deleteTransaction('${tx.invId}','${tx.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>Löschen</button></div>
+      <div class="tx-row" data-tx-row>
+        <div class="tx-badge ${tx.type}">${icon}</div>
+        <div class="tx-info"><div class="tx-name">${tx.invName}${tx.invSymbol?' · '+tx.invSymbol:''}</div><div class="tx-sub">${tx.date} · ${tx.quantity} Stk. à ${tx.price} ${tx.currency}</div></div>
+        <div class="tx-amt">${(tx.quantity*tx.price).toLocaleString('de-CH',{minimumFractionDigits:2,maximumFractionDigits:2})} ${tx.currency}</div>
+        <div class="tx-kebab" onclick="event.stopPropagation(); openTxQuickMenu('${tx.invId}','${tx.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="19" r="1.4"/></svg></div>
+      </div></div>`;
+  }).join('');
+  attachSwipeHandlers();
+}
+
+/* ============ KI-COACH CHAT ============ */
+const CHAT_SUGGESTIONS = [
+  'Bin ich zu wenig diversifiziert?',
+  'Welche Position ist am riskantesten?',
+  'Wie stark bin ich in Krypto investiert?',
+  'Sollte ich Gewinne mitnehmen?',
+  'Was fehlt in meinem Portfolio?',
+  'Welcher Broker passt zu mir?'
+];
+function initChat(){
+  renderSuggestionBar();
+  addMsg('assistant', 'Hallo! Ich bin dein persönlicher Investment-Coach und kenne dein Portfolio. Frag mich, was dich interessiert — z.B. zu Risiken, Diversifikation oder Prognosen.');
+  chatHistory.push({role:'assistant', content:'init'});
+}
+function quickChat(text){ document.getElementById('chat-input').value = text; sendChat(); }
+function renderSuggestionBar(options){
+  const bar = document.getElementById('chat-suggestions-bar');
+  const list = (options && options.length) ? options : CHAT_SUGGESTIONS;
+  bar.innerHTML = list.map(o=>`<div class="chat-chip" onclick="handleChatOption('${o.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">${o}</div>`).join('');
+}
+function addMsg(role, text){
+  const wrap = document.getElementById('chat-messages');
+  const div = document.createElement('div'); div.className = 'msg ' + role; div.innerHTML = text.replace(/\n/g,'<br>');
+  wrap.appendChild(div);
+  window.scrollTo(0, document.body.scrollHeight);
+}
+function handleChatOption(text){
+  const lower = text.toLowerCase();
+  if(lower.includes('investment hinzufügen') || lower.includes('position hinzufügen') || lower.includes('etf hinzufügen') || lower.includes('kaufen')){ openAddSheet('invest'); return; }
+  if(lower.includes('ziel') && (lower.includes('setzen')||lower.includes('erstellen'))){ nav('more'); openGoalSheet(); return; }
+  if(lower.includes('empfehlung') || lower.includes('aufteilung')){ document.getElementById('coach-profile-details').open = true; generateRecommendation(); return; }
+  quickChat(text);
+}
+function needsSearch(text){
+  const t = text.toLowerCase();
+  return ['aktuell','heute','news','nachrichten','markt','zins','preis','kurs von','was kostet','gestiegen','gefallen','krieg','krise','inflation'].some(k=>t.includes(k));
+}
+async function sendChat(){
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim(); if(!text) return;
+  addMsg('user', text); input.value = '';
+  const wrap = document.getElementById('chat-messages');
+  const bubble = document.createElement('div'); bubble.className = 'msg assistant';
+  bubble.innerHTML = '<span class="stream-cursor">&nbsp;</span>';
+  wrap.appendChild(bubble); window.scrollTo(0, document.body.scrollHeight);
+
+  const list = allHoldings().filter(h=>h.qty>0);
+  const total = totalValueCHF(list);
+  const portfolioCtx = list.map(h=>({name:h.name, category:h.category, sector:h.sector||'unbekannt', country:h.country||'unbekannt', currency:h.currency, valueCHF:Math.round(h.valueCHF), weightPct:+((h.valueCHF/total)*100).toFixed(1), returnPct:+h.retPct.toFixed(1), risk:computeRiskLevel(h.category, total>0?(h.valueCHF/total)*100:0).label}));
+  const profileCtx = `Verfügbares Vermögen: ${fmtCHF(availableCapital)}, Risikobereitschaft: ${riskTolerance}, Anlageziel: ${investmentGoal}`;
+  const needsBrokerInfo = /broker|plattform|anbieter|app\b/i.test(text);
+  const brokerCtx = needsBrokerInfo ? Object.entries(BROKERS_DB).map(([country,l])=>`${country}: ${l.map(b=>`${b.name} (${b.assets}, ${b.fees}, ${b.level})`).join('; ')}`).join(' | ') : '';
+  const contextPrompt = `Du bist ein erfahrener, nüchterner Investment-Coach für einen Schweizer Privatanleger mit direktem Zugriff auf sein echtes Portfolio. Du gibst KEINE verbindlichen Kauf-/Verkaufsempfehlungen, sondern fundierte, präzise Einschätzungen mit kurzer Begründung. Antworte auf Deutsch, so kurz wie möglich (idealerweise 2-4 Sätze), konkret, in reinem Fliesstext ohne JSON, ohne Markdown, ohne Codeblöcke.
+Profil: ${profileCtx}
+Portfolio (Gesamtwert CHF ${Math.round(total)}): ${JSON.stringify(portfolioCtx)}${brokerCtx ? '\nBroker-Verzeichnis (nur nutzen falls relevant): '+brokerCtx : ''}`;
+
+  try{
+    const messages = [{role:'user', content:contextPrompt}, {role:'assistant', content:'Verstanden, ich habe dein Portfolio und Profil im Blick.'}];
+    chatHistory.forEach(m=>{ if(m.content!=='init') messages.push({role:m.role, content:m.content}); });
+    messages.push({role:'user', content:text});
+    const reply = await streamClaude(messages, needsSearch(text), (partial)=>{
+      bubble.innerHTML = partial.replace(/\n/g,'<br>') + '<span class="stream-cursor">&nbsp;</span>';
+      window.scrollTo(0, document.body.scrollHeight);
+    });
+    bubble.innerHTML = reply.replace(/\n/g,'<br>');
+    renderSuggestionBar(deriveChatOptions(reply, text));
+    chatHistory.push({role:'user', content:text});
+    chatHistory.push({role:'assistant', content:reply});
+  }catch(e){
+    bubble.innerHTML = 'Entschuldige, ich konnte gerade nicht antworten (' + e.message + '). Versuch es nochmal.';
+  }
+  window.scrollTo(0, document.body.scrollHeight);
+}
+function deriveChatOptions(reply, userText){
+  const t = (reply+' '+userText).toLowerCase();
+  const pool = [
+    {kw:['diversifik','streuung','konzentr'], opts:['Wie kann ich besser diversifizieren?']},
+    {kw:['risiko','volatil','schwank'], opts:['Welche Position ist am riskantesten?']},
+    {kw:['krypto','bitcoin'], opts:['Ist mein Krypto-Anteil zu hoch?']},
+    {kw:['dividende'], opts:['Wie hoch sind meine jährlichen Dividenden?']},
+    {kw:['etf'], opts:['Welcher ETF würde gut passen?']},
+    {kw:['broker','plattform'], opts:['Welcher Broker passt zu mir?']},
+    {kw:['ziel','sparen','sparplan'], opts:['Wie lange bis zu meinem Ziel?']},
+    {kw:['rendite','performance'], opts:['Wie schneide ich im Vergleich zum Markt ab?']},
+    {kw:['cash','bargeld','reserve'], opts:['Wie viel sollte ich investieren?']},
+  ];
+  let opts = [];
+  pool.forEach(p=>{ if(p.kw.some(k=>t.includes(k))) opts.push(...p.opts); });
+  opts = [...new Set(opts)].slice(0,3);
+  return opts.length ? opts : CHAT_SUGGESTIONS.slice(0,4);
+}
+
+/* ============ API HELPERS ============ */
+function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
+async function fetchAnthropicWithRetry(body, maxRetries){
+  if(maxRetries==null) maxRetries = 2;
+  let attempt = 0;
+  while(true){
+    let res;
+    try{
+      res = await fetch("https://api.anthropic.com/v1/messages", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
+    }catch(networkErr){
+      if(attempt<maxRetries){ attempt++; await sleep(500*attempt*attempt); continue; }
+      throw new Error('Netzwerkfehler nach ' + (attempt+1) + ' Versuchen: ' + networkErr.message);
+    }
+    if((res.status===429 || res.status>=500) && attempt<maxRetries){
+      attempt++; await sleep(500*attempt*attempt); continue;
+    }
+    return res;
+  }
+}
+async function streamClaude(messages, withSearch, onProgress){
+  const body = {model:"claude-sonnet-4-6", max_tokens:1000, messages, stream:true};
+  if(withSearch) body.tools = [{type:"web_search_20250305", name:"web_search"}];
+  const res = await fetchAnthropicWithRetry(body);
+  if(!res.ok){
+    let msg = 'HTTP ' + res.status;
+    try{ const errData = await res.json(); msg = (errData.error && errData.error.message) || msg; }catch(e){}
+    throw new Error(msg);
+  }
+  if(!res.body || !res.body.getReader){
+    const data = await res.json();
+    const text = (data.content||[]).map(b=>b.text||'').join('').trim();
+    if(!text) throw new Error('Leere Antwort vom Modell erhalten');
+    if(onProgress) onProgress(text);
+    return text;
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '', fullText = '';
+  while(true){
+    const {done, value} = await reader.read();
+    if(done) break;
+    buffer += decoder.decode(value, {stream:true});
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
+    for(const line of lines){
+      if(!line.startsWith('data:')) continue;
+      const dataStr = line.slice(5).trim();
+      if(!dataStr || dataStr==='[DONE]') continue;
+      try{
+        const evt = JSON.parse(dataStr);
+        if(evt.type==='content_block_delta' && evt.delta && evt.delta.type==='text_delta'){
+          fullText += evt.delta.text;
+          if(onProgress) onProgress(fullText);
+        } else if(evt.type==='error'){
+          throw new Error((evt.error && evt.error.message) || 'Stream-Fehler');
+        }
+      }catch(parseErr){ /* ignore malformed SSE line */ }
+    }
+  }
+  if(!fullText.trim()) throw new Error('Leere Antwort vom Modell erhalten');
+  return fullText.trim();
+}
+async function callClaudeMessages(messages, withSearch){
+  const body = {model:"claude-sonnet-4-6", max_tokens:1000, messages};
+  if(withSearch) body.tools = [{type:"web_search_20250305", name:"web_search"}];
+  const res = await fetchAnthropicWithRetry(body);
+  let data;
+  try{ data = await res.json(); }catch(parseErr){ throw new Error('Antwort konnte nicht gelesen werden (Status ' + res.status + ')'); }
+  if(!res.ok || data.type==='error'){
+    const msg = (data.error && data.error.message) || ('HTTP ' + res.status);
+    throw new Error(msg);
+  }
+  const text = (data.content||[]).map(b=>b.text||'').join('').trim();
+  if(!text){ throw new Error('Leere Antwort vom Modell erhalten'); }
+  return text;
+}
+function callClaude(prompt, withSearch){ return callClaudeMessages([{role:'user', content:prompt}], withSearch); }
+
+/* ============ PRICE REFRESH ============ */
+async function refreshPrices(manual){
+  const active = investments.filter(i=>computeHolding(i).qty>0);
+  if(!active.length && !watchlist.length){ if(manual) showToast('Keine Positionen zum Aktualisieren'); return; }
+  if(manual) showToast('Kurse werden aktualisiert…');
+  for(const inv of active){
+    try{
+      const prevPrice = inv.currentPrice || 0;
+      const prompt = `Finde per Websuche den ungefähren aktuellen Kurs für "${inv.name}" (Symbol: ${inv.symbol||''}). Antworte NUR mit JSON: {"price": number}`;
+      const text = await callClaude(prompt, true);
+      const data = JSON.parse(text.replace(/```json|```/g,'').trim());
+      if(data.price){
+        inv.currentPrice = data.price; inv.priceHistory = inv.priceHistory||[]; inv.priceHistory.push({date:todayISO(), price:data.price});
+        checkAlerts(inv, prevPrice, data.price);
+      }
+    }catch(e){ /* skip on failure */ }
+    await sleep(250);
+  }
+  for(const w of watchlist){
+    try{
+      const text = await callClaude(`Finde per Websuche den ungefähren aktuellen Kurs für "${w.name}" (Symbol: ${w.symbol}). Antworte NUR mit JSON: {"price": number}`, true);
+      const data = JSON.parse(text.replace(/```json|```/g,'').trim());
+      if(data.price) w.currentPrice = data.price;
+    }catch(e){ /* skip on failure */ }
+    await sleep(250);
+  }
+  snapshotHistory(); persist();
+  setLastRefreshTs();
+  if(document.getElementById('screen-home').classList.contains('active')) renderHome();
+  if(document.getElementById('screen-more').classList.contains('active')) renderMore();
+  if(document.getElementById('screen-analytics').classList.contains('active')) renderWatchlistContent();
+  if(manual) showToast('Kurse aktualisiert');
+}
+function setLastRefreshTs(){
+  localStorage.setItem('cp3_lastrefresh_ts', Date.now().toString());
+  window.__lastRefresh = new Date().toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit'});
+}
+function getLastRefreshTs(){ return parseInt(localStorage.getItem('cp3_lastrefresh_ts')||'0'); }
+
+/* ============ EXPORT / IMPORT ============ */
+function exportJSON(){
+  const blob = new Blob([JSON.stringify({investments, goals, portfolioHistory}, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='compound-export.json'; a.click(); URL.revokeObjectURL(url);
+  showToast('JSON exportiert');
+}
+function exportCSV(){
+  const rows = [['Investment','Symbol','Kategorie','Broker','Branche','Land','Typ','Datum','Preis','Menge','Gebühren','Währung']];
+  investments.forEach(inv=>(inv.transactions||[]).forEach(tx=>rows.push([inv.name, inv.symbol, inv.category, inv.broker, inv.sector||'', inv.country||'', tx.type, tx.date, tx.price, tx.quantity, tx.fees, inv.currency])));
+  const csv = rows.map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'}); const url = URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='compound-export.csv'; a.click(); URL.revokeObjectURL(url);
+  showToast('CSV exportiert');
+}
+function handleImport(e){
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const data = JSON.parse(reader.result);
+      if(data.investments) investments = data.investments;
+      if(data.goals) goals = data.goals;
+      if(data.portfolioHistory) portfolioHistory = data.portfolioHistory;
+      persist(); nav('home'); showToast('Import erfolgreich');
+    }catch(err){ showToast('Import fehlgeschlagen'); }
+  };
+  reader.readAsText(file); e.target.value = '';
+}
+
+/* ============ JAHRESRÜCKBLICK ("WRAPPED") ============ */
+function availableWrappedYears(){
+  const years = new Set();
+  investments.forEach(inv=>(inv.transactions||[]).forEach(t=>years.add(t.date.slice(0,4))));
+  portfolioHistory.forEach(h=>years.add(h.date.slice(0,4)));
+  if(!years.size) years.add(new Date().getFullYear().toString());
+  return [...years].sort((a,b)=>b.localeCompare(a));
+}
+function openWrappedSheet(){
+  const years = availableWrappedYears();
+  document.getElementById('wrapped-year-chips').innerHTML = years.map((y,i)=>`<div class="chip ${i===0?'active':''}" data-year="${y}" onclick="selectWrappedYear('${y}')">${y}</div>`).join('');
+  renderWrapped(years[0]);
+  openSheet('sheet-wrapped');
+}
+function selectWrappedYear(year){
+  document.querySelectorAll('#wrapped-year-chips .chip').forEach(c=>c.classList.toggle('active', c.dataset.year===year));
+  renderWrapped(year);
+}
+function renderWrapped(year){
+  const el = document.getElementById('wrapped-content');
+  const yearTx = investments.flatMap(inv=>(inv.transactions||[]).filter(t=>t.date.slice(0,4)===year).map(t=>({...t, invName:inv.name, currency:inv.currency})));
+  const buys = yearTx.filter(t=>t.type==='buy'), sells = yearTx.filter(t=>t.type==='sell');
+  const yearDivs = investments.flatMap(inv=>(inv.dividends||[]).filter(d=>d.date.slice(0,4)===year).map(d=>({...d, fx:FX_TO_CHF[inv.currency]||1})));
+  const divTotal = yearDivs.reduce((s,d)=>s+d.amount*d.fx,0);
+  const yearHistory = portfolioHistory.filter(h=>h.date.slice(0,4)===year);
+  const startVal = yearHistory.length ? yearHistory[0].value : (portfolioHistory[0]?portfolioHistory[0].value:0);
+  const endVal = yearHistory.length ? yearHistory[yearHistory.length-1].value : totalValueCHF(allHoldings());
+  const growthPct = startVal!==0 ? ((endVal-startVal)/startVal)*100 : 0;
+  let bestGain=null, worstLoss=null;
+  investments.forEach(inv=>{
+    const fx = FX_TO_CHF[inv.currency]||1;
+    let qty=0, costBasis=0;
+    [...(inv.transactions||[])].sort((a,b)=>a.date.localeCompare(b.date)).forEach(tx=>{
+      if(tx.type==='buy'){ costBasis+=tx.quantity*tx.price+(tx.fees||0); qty+=tx.quantity; }
+      else{
+        const avg = qty>0?costBasis/qty:0;
+        const gain = (tx.price*tx.quantity - avg*tx.quantity - (tx.fees||0))*fx;
+        if(tx.date.slice(0,4)===year){
+          if(!bestGain || gain>bestGain.gain) bestGain = {name:inv.name, gain};
+          if(!worstLoss || gain<worstLoss.gain) worstLoss = {name:inv.name, gain};
+        }
+        costBasis-=avg*tx.quantity; qty-=tx.quantity;
+      }
+    });
+  });
+  const holdings = allHoldings().filter(h=>h.qty>0);
+  const bestPos = holdings.length ? [...holdings].sort((a,b)=>b.retPct-a.retPct)[0] : null;
+  const worstPos = holdings.length ? [...holdings].sort((a,b)=>a.retPct-b.retPct)[0] : null;
+  const yearMilestones = MILESTONE_THRESHOLDS.filter(t=>{ const e = portfolioHistory.find(h=>h.value>=t); return e && e.date.slice(0,4)===year; });
+
+  const cards = [
+    {label:'Vermögenswachstum '+year, value:fmtPct(growthPct), sub:`Von ${fmtCHF(startVal)} auf ${fmtCHF(endVal)}`},
+    {label:'Käufe & Verkäufe', value:`${buys.length} / ${sells.length}`, sub:'Käufe / Verkäufe in '+year},
+    {label:'Dividenden erhalten', value:fmtCHF(divTotal), sub:yearDivs.length+' Ausschüttung(en)'},
+  ];
+  if(bestGain) cards.push({label:'Größter Einzelgewinn', value:fmtCHF(bestGain.gain), sub:bestGain.name});
+  if(worstLoss && worstLoss.gain<0) cards.push({label:'Größter Einzelverlust', value:fmtCHF(worstLoss.gain), sub:worstLoss.name});
+  if(bestPos) cards.push({label:'Beste Position (aktuell)', value:fmtPct(bestPos.retPct), sub:bestPos.name});
+  if(worstPos) cards.push({label:'Schwächste Position (aktuell)', value:fmtPct(worstPos.retPct), sub:worstPos.name});
+  if(yearMilestones.length) cards.push({label:'Meilensteine erreicht', value:yearMilestones.length.toString(), sub:yearMilestones.map(t=>'CHF '+t.toLocaleString('de-CH')).join(', ')});
+
+  el.innerHTML = cards.map(c=>`
+    <div class="wrapped-card">
+      <div class="wrapped-label">${c.label}</div>
+      <div class="wrapped-value">${c.value}</div>
+      <div class="wrapped-sub">${c.sub}</div>
+    </div>`).join('') + `<p style="font-size:11.5px; color:var(--text-faint); text-align:center; margin-top:4px;">Beste/schwächste Position basieren auf der aktuellen Gesamtrendite, nicht isoliert auf ${year}.</p>`;
+}
+
+/* ============ PORTFOLIO-SNAPSHOT ============ */
+function openSnapshotSheet(){
+  createSnapshot();
+  openSheet('sheet-snapshot');
+}
+function createSnapshot(){
+  const canvas = document.getElementById('snapshot-canvas');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  const grad = ctx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0,'#0c0e11'); grad.addColorStop(1,'#050608');
+  ctx.fillStyle = grad; ctx.fillRect(0,0,w,h);
+
+  ctx.fillStyle = '#eceef1'; ctx.font = '700 42px Inter, sans-serif'; ctx.fillText('Compound', 70, 110);
+  ctx.fillStyle = '#767c87'; ctx.font = '500 26px Inter, sans-serif'; ctx.fillText('Portfolio-Snapshot · ' + new Date().toLocaleDateString('de-CH'), 70, 150);
+
+  const list = allHoldings().filter(hh=>hh.qty>0);
+  const total = totalValueCHF(list);
+  ctx.fillStyle = '#767c87'; ctx.font = '600 24px Inter, sans-serif'; ctx.fillText('GESAMTVERMÖGEN', 70, 260);
+  ctx.fillStyle = '#eceef1'; ctx.font = '800 76px Inter, sans-serif'; ctx.fillText(fmtCHF(total), 70, 340);
+
+  let delta=0, deltaPct=0;
+  if(portfolioHistory.length>1){ const last=portfolioHistory[portfolioHistory.length-1].value; const prev=portfolioHistory[portfolioHistory.length-2].value; delta=last-prev; deltaPct=prev!==0?(delta/prev)*100:0; }
+  ctx.fillStyle = delta>=0 ? '#22c55e' : '#ef4444'; ctx.font = '700 36px Inter, sans-serif';
+  ctx.fillText((delta>=0?'▲ ':'▼ ') + fmtPct(deltaPct) + ' heute', 70, 400);
+
+  const totalInvested = list.reduce((s,hh)=>s+hh.investedCHF,0);
+  const totalGain = list.reduce((s,hh)=>s+hh.unrealizedCHF+hh.realizedCHF,0);
+  const totalRet = totalInvested!==0 ? (totalGain/totalInvested)*100 : 0;
+  ctx.fillStyle = '#767c87'; ctx.font = '500 26px Inter, sans-serif'; ctx.fillText('Gesamtrendite: ' + fmtPct(totalRet), 70, 450);
+
+  const hist = portfolioHistory.slice(-60);
+  if(hist.length>=2){
+    const chartX=70, chartY=560, chartW=w-140, chartH=380;
+    const vals = hist.map(p=>p.value);
+    const min = Math.min(...vals), max = Math.max(...vals);
+    const range = (max-min)||1;
+    ctx.beginPath();
+    hist.forEach((p,i)=>{
+      const x = chartX + (i/(hist.length-1))*chartW;
+      const y = chartY + chartH - ((p.value-min)/range)*chartH;
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    });
+    const rising = vals[vals.length-1]>=vals[0];
+    ctx.strokeStyle = rising ? '#22c55e' : '#ef4444'; ctx.lineWidth = 5; ctx.lineJoin='round'; ctx.stroke();
+    const fillGrad = ctx.createLinearGradient(0,chartY,0,chartY+chartH);
+    fillGrad.addColorStop(0, rising ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.25)');
+    fillGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.lineTo(chartX+chartW, chartY+chartH); ctx.lineTo(chartX, chartY+chartH); ctx.closePath();
+    ctx.fillStyle = fillGrad; ctx.fill();
+  }
+
+  ctx.fillStyle = '#3d4149'; ctx.font = '500 22px Inter, sans-serif'; ctx.fillText('Erstellt mit Compound', 70, h-60);
+
+  const dataUrl = canvas.toDataURL('image/png');
+  document.getElementById('snapshot-img').src = dataUrl;
+  window.__snapshotDataUrl = dataUrl;
+  document.getElementById('snapshot-share-btn').classList.toggle('hidden', !(navigator.share && navigator.canShare));
+}
+function downloadSnapshot(){
+  const a = document.createElement('a'); a.href = window.__snapshotDataUrl; a.download = 'compound-snapshot.png'; a.click();
+}
+async function shareSnapshot(){
+  try{
+    const res = await fetch(window.__snapshotDataUrl);
+    const blob = await res.blob();
+    const file = new File([blob], 'compound-snapshot.png', {type:'image/png'});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({files:[file], title:'Mein Portfolio-Snapshot'});
+    } else { downloadSnapshot(); }
+  }catch(e){ downloadSnapshot(); }
+}
+
+/* ============ INIT ============ */
+load();
+if(!portfolioHistory.length && investments.length){ snapshotHistory(); persist(); }
+window.__lastRefresh = null;
+renderHome();
+const FIFTEEN_MIN = 15*60*1000;
+if((investments.length||watchlist.length) && (Date.now() - getLastRefreshTs() > FIFTEEN_MIN)){ refreshPrices(false); }
+setInterval(()=>{ if(investments.some(i=>computeHolding(i).qty>0) || watchlist.length) refreshPrices(false); }, FIFTEEN_MIN);
+</script>
+</body>
+</html>
