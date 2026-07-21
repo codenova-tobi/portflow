@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-<title>Compound</title>
+<title>PortFlow — Dein Investment-Coach</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
@@ -26,6 +26,34 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 
 .topbar{position:sticky; top:0; z-index:20; display:flex; align-items:center; justify-content:space-between; padding:20px 20px 6px 20px; background:linear-gradient(180deg, var(--bg) 65%, rgba(5,6,8,0));}
 .topbar .greet{font-size:13px; color:var(--text-dim); font-weight:500;}
+.brand-lockup{font-size:15px; font-weight:800; letter-spacing:-0.01em; margin-bottom:2px;}
+.trust-strip{display:flex; flex-direction:column; gap:9px; background:var(--card); border:1px solid var(--border-soft); border-radius:var(--radius-sm); padding:14px 16px;}
+.trust-item{display:flex; align-items:center; gap:9px; font-size:12.5px; color:var(--text-dim); font-weight:500;}
+.trust-item svg{width:16px; height:16px; color:var(--green); flex-shrink:0;}
+
+/* Onboarding flow */
+.onb-overlay{position:fixed; inset:0; z-index:100; background:var(--bg); display:flex; flex-direction:column;}
+.onb-overlay.hidden{display:none;}
+.onb-body{flex:1; max-width:480px; width:100%; margin:0 auto; padding:32px 24px; display:flex; flex-direction:column; overflow-y:auto;}
+.onb-progress{display:flex; gap:6px; margin-bottom:28px;}
+.onb-progress .seg{flex:1; height:3px; border-radius:2px; background:var(--border);}
+.onb-progress .seg.done{background:var(--text);}
+.onb-eyebrow{font-size:12.5px; font-weight:700; color:var(--blue); text-transform:uppercase; letter-spacing:.05em; margin-bottom:10px;}
+.onb-title{font-size:24px; font-weight:800; letter-spacing:-0.02em; line-height:1.25; margin-bottom:8px;}
+.onb-sub{font-size:14px; color:var(--text-dim); line-height:1.5; margin-bottom:28px;}
+.onb-options{display:flex; flex-direction:column; gap:10px;}
+.onb-option{display:flex; align-items:center; gap:12px; padding:16px; border-radius:var(--radius-sm); background:var(--card); border:1.5px solid var(--border-soft); cursor:pointer; text-align:left; font-family:inherit;}
+.onb-option.selected{border-color:var(--text); background:var(--card-hover);}
+.onb-option .emoji{font-size:20px; flex-shrink:0;}
+.onb-option .label{font-size:14.5px; font-weight:600;}
+.onb-footer{margin-top:auto; padding-top:24px; display:flex; gap:10px;}
+.onb-profile-card{background:linear-gradient(135deg, var(--card), var(--bg-elev)); border:1px solid var(--border-soft); border-radius:var(--radius); padding:22px; text-align:center; margin-bottom:16px;}
+.onb-profile-card .badge{font-size:34px; margin-bottom:10px;}
+.onb-profile-card .name{font-size:19px; font-weight:800; margin-bottom:6px;}
+.onb-profile-card .desc{font-size:13px; color:var(--text-dim); line-height:1.5;}
+.onb-promise{display:flex; flex-direction:column; gap:12px; margin-top:4px;}
+.onb-promise-item{display:flex; align-items:center; gap:10px; font-size:13.5px; color:#d8dbe0;}
+.onb-promise-item svg{width:18px; height:18px; color:var(--green); flex-shrink:0;}
 .icon-btn{width:36px;height:36px; border-radius:11px; background:var(--card); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; color:var(--text-dim);}
 .icon-btn svg{width:17px;height:17px;}
 .back-btn{display:flex; align-items:center; gap:6px; color:var(--text-dim); font-size:14px; font-weight:600;}
@@ -311,12 +339,70 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 </style>
 </head>
 <body>
+
+<div class="onb-overlay hidden" id="onb-overlay">
+  <div class="onb-body">
+    <div class="onb-progress"><div class="seg" id="onb-seg-1"></div><div class="seg" id="onb-seg-2"></div><div class="seg" id="onb-seg-3"></div></div>
+
+    <div id="onb-step-1">
+      <div class="onb-eyebrow">Schritt 1 / 3</div>
+      <div class="onb-title">Was ist dein Investment-Ziel?</div>
+      <div class="onb-sub">PortFlow passt Analysen und Empfehlungen an dein Ziel an.</div>
+      <div class="onb-options" id="onb-goal-options">
+        <button class="onb-option" data-goal="Vermögensaufbau"><span class="emoji">📈</span><span class="label">Vermögen aufbauen</span></button>
+        <button class="onb-option" data-goal="Finanzielle Freiheit"><span class="emoji">🚀</span><span class="label">Früh finanzielle Freiheit erreichen</span></button>
+        <button class="onb-option" data-goal="Dividenden"><span class="emoji">💰</span><span class="label">Dividenden erhalten</span></button>
+        <button class="onb-option" data-goal="Langfristig"><span class="emoji">🌳</span><span class="label">Langfristig investieren</span></button>
+        <button class="onb-option" data-goal="Verstehen"><span class="emoji">🔍</span><span class="label">Mein Depot besser verstehen</span></button>
+      </div>
+      <div class="onb-footer"><button class="btn btn-primary" style="width:100%;" id="onb-next-1" disabled onclick="onbNext(2)">Weiter</button></div>
+    </div>
+
+    <div id="onb-step-2" class="hidden">
+      <div class="onb-eyebrow">Schritt 2 / 3</div>
+      <div class="onb-title">Wie investierst du?</div>
+      <div class="onb-sub">Damit dein Investment Score realistisch berechnet wird.</div>
+      <div class="onb-options" id="onb-style-options">
+        <button class="onb-option" data-style="ETFs"><span class="emoji">📊</span><span class="label">ETFs</span></button>
+        <button class="onb-option" data-style="Aktien"><span class="emoji">🏢</span><span class="label">Aktien</span></button>
+        <button class="onb-option" data-style="Krypto"><span class="emoji">⚡</span><span class="label">Krypto</span></button>
+        <button class="onb-option" data-style="Gemischt"><span class="emoji">🧩</span><span class="label">Gemischt</span></button>
+      </div>
+      <div class="onb-footer">
+        <button class="btn btn-ghost" onclick="onbBack(1)">Zurück</button>
+        <button class="btn btn-primary" style="flex:1;" id="onb-next-2" disabled onclick="onbShowProfile()">Weiter</button>
+      </div>
+    </div>
+
+    <div id="onb-step-3" class="hidden">
+      <div class="onb-eyebrow">Dein Profil</div>
+      <div class="onb-title" id="onb-profile-title">Dein Investor-Profil</div>
+      <div class="onb-sub">So hilft dir PortFlow ab jetzt:</div>
+      <div class="onb-profile-card">
+        <div class="badge" id="onb-profile-badge">🌱</div>
+        <div class="name" id="onb-profile-name">–</div>
+        <div class="desc" id="onb-profile-desc">–</div>
+      </div>
+      <div class="onb-promise">
+        <div class="onb-promise-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>Du verstehst dein Portfolio besser</div>
+        <div class="onb-promise-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>Du erkennst Risiken frühzeitig</div>
+        <div class="onb-promise-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>Du siehst, ob du auf Kurs bist</div>
+        <div class="onb-promise-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>Du verbesserst deine Strategie</div>
+      </div>
+      <div class="onb-footer"><button class="btn btn-primary" style="width:100%;" onclick="onbFinish()">Los geht's</button></div>
+    </div>
+  </div>
+</div>
+
 <div class="shell" id="shell">
 
   <!-- HOME -->
   <div class="screen active" id="screen-home">
     <div class="topbar">
-      <div class="greet" id="home-greet">Portfolio</div>
+      <div>
+        <div class="brand-lockup">PortFlow</div>
+        <div class="greet" id="home-greet">Dein Investment-Coach</div>
+      </div>
       <div style="display:flex; gap:8px;">
         <div class="icon-btn" onclick="openSnapshotSheet()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
         <div class="icon-btn" onclick="refreshPrices(true)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg></div>
@@ -363,7 +449,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
       <div class="section">
         <div class="card health-card" onclick="openSheet('sheet-health')">
           <div class="health-ring-wrap"><svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="27" stroke="#1a1c20" stroke-width="7" fill="none"/><circle id="health-ring" cx="32" cy="32" r="27" stroke="#22c55e" stroke-width="7" fill="none" stroke-linecap="round" stroke-dasharray="169.6" stroke-dashoffset="169.6"/></svg><div class="health-num" id="health-num">–</div></div>
-          <div class="health-info"><div class="t">Portfolio Health Score</div><div class="s" id="health-sub">Tippen für Details</div></div>
+          <div class="health-info"><div class="t">Dein Investment Score</div><div class="s" id="health-sub">Tippen für Details</div></div>
         </div>
       </div>
 
@@ -627,7 +713,14 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
         <button class="btn btn-ghost" onclick="document.getElementById('import-file').click()">JSON importieren</button>
       </div>
     </div>
-    <div class="section" style="color:var(--text-faint); font-size:12px; text-align:center; padding-top:6px;" id="last-refresh">Alle Daten lokal gespeichert · Compound</div>
+    <div class="section">
+      <div class="trust-strip">
+        <div class="trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Deine Daten bleiben privat</div>
+        <div class="trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L4 6v6c0 5 3.4 8.4 8 10 4.6-1.6 8-5 8-10V6z"/></svg>Keine Bankverbindung nötig</div>
+        <div class="trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Alles lokal gespeichert</div>
+      </div>
+      <div style="color:var(--text-faint); font-size:11.5px; text-align:center; padding-top:14px;" id="last-refresh">PortFlow</div>
+    </div>
   </div>
 
   <div class="bottomnav">
@@ -774,7 +867,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 <div class="sheet-overlay" id="sheet-health" onclick="if(event.target===this) closeSheet('sheet-health')">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">Health Score im Detail</div>
+    <div class="sheet-title">Investment Score im Detail</div>
     <div id="health-detail"></div>
   </div>
 </div>
@@ -875,6 +968,12 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 
 <script>
 /* ============ CONFIG ============ */
+/* ============ API-ENDPUNKT ============
+   Innerhalb der Claude-Vorschau funktioniert die direkte Anthropic-URL automatisch (Anthropic übernimmt die Authentifizierung im Hintergrund).
+   Sobald die App auf einer eigenen Domain (z.B. portflow.ch) gehostet wird, MUSS diese Zeile auf die eigene Proxy-Funktion zeigen,
+   z.B. "/api/claude" (Vercel) oder "/.netlify/functions/claude" (Netlify) — siehe mitgelieferte Proxy-Dateien. */
+const CLAUDE_API_ENDPOINT = "https://api.anthropic.com/v1/messages";
+
 const FX_TO_CHF = {CHF:1, EUR:0.96, USD:0.88, GBP:1.12};
 const CHART_COLORS = ['#eceef1','#7d8590','#4d525c','#c9cdd3','#5c6068','#9aa0a8','#33363c','#b4b8bd','#60a5fa','#f59e0b'];
 const MILESTONE_THRESHOLDS = [10000,25000,50000,100000,250000,500000,1000000];
@@ -1003,7 +1102,7 @@ const TF_LABELS = {'1T':'die letzten 24 Stunden','1W':'die letzten 7 Tage','1M':
 let selectedAsset = null;
 let chatHistory = [];
 let charts = {};
-let availableCapital = 0, riskTolerance = 'ausgewogen', investmentGoal = 'Vermögensaufbau';
+let availableCapital = 0, riskTolerance = 'ausgewogen', investmentGoal = 'Vermögensaufbau', investmentStyle = 'Gemischt';
 let addMode = 'invest';
 let currentBrokerCountry = 'Schweiz';
 const RISK_BASE = {Cash:1, Anleihe:1, Edelmetall:2, REIT:2, Immobilie:2, Fonds:2, ETF:2, Index:2, Aktie:3, Rohstoff:3, Sonstige:2, Krypto:4};
@@ -1015,7 +1114,7 @@ function load(){
   try{ watchlist = JSON.parse(localStorage.getItem('cp3_watchlist')||'[]'); }catch(e){ watchlist=[]; }
   try{ alerts = JSON.parse(localStorage.getItem('cp3_alerts')||'[]'); }catch(e){ alerts=[]; }
   try{ healthHistory = JSON.parse(localStorage.getItem('cp3_health_history')||'[]'); }catch(e){ healthHistory=[]; }
-  try{ const p = JSON.parse(localStorage.getItem('cp3_profile')||'null'); if(p){ availableCapital=p.capital||0; riskTolerance=p.risk||'ausgewogen'; investmentGoal=p.goal||'Vermögensaufbau'; } }catch(e){}
+  try{ const p = JSON.parse(localStorage.getItem('cp3_profile')||'null'); if(p){ availableCapital=p.capital||0; riskTolerance=p.risk||'ausgewogen'; investmentGoal=p.goal||'Vermögensaufbau'; investmentStyle=p.style||'Gemischt'; } }catch(e){}
 }
 function persist(){
   localStorage.setItem('cp3_investments', JSON.stringify(investments));
@@ -1024,7 +1123,56 @@ function persist(){
   localStorage.setItem('cp3_watchlist', JSON.stringify(watchlist));
   localStorage.setItem('cp3_alerts', JSON.stringify(alerts));
 }
-function persistProfile(){ localStorage.setItem('cp3_profile', JSON.stringify({capital:availableCapital, risk:riskTolerance, goal:investmentGoal})); }
+function persistProfile(){ localStorage.setItem('cp3_profile', JSON.stringify({capital:availableCapital, risk:riskTolerance, goal:investmentGoal, style:investmentStyle})); }
+
+/* ============ ONBOARDING ============ */
+const ONB_INVESTOR_PROFILES = {
+  'Vermögensaufbau': {badge:'🌳', name:'Vermögensaufbauer', desc:'Du willst dein Vermögen strukturiert und langfristig wachsen lassen. PortFlow zeigt dir, ob dein Portfolio dafür breit genug aufgestellt ist.'},
+  'Finanzielle Freiheit': {badge:'🚀', name:'FIRE-Anleger', desc:'Dein Fokus liegt auf maximalem langfristigem Wachstum, um früh finanziell unabhängig zu werden. PortFlow achtet besonders auf Rendite und Risikobalance.'},
+  'Dividenden': {badge:'💰', name:'Einkommens-Investor', desc:'Regelmässige Ausschüttungen stehen für dich im Vordergrund. PortFlow behält deine Dividendenstrategie im Blick.'},
+  'Langfristig': {badge:'🌿', name:'Langfrist-Investor', desc:'Du denkst in Jahren, nicht in Tagen. PortFlow filtert kurzfristiges Rauschen und zeigt dir das große Bild.'},
+  'Verstehen': {badge:'🔍', name:'Bewusster Investor', desc:'Dir geht es zuerst darum, dein bestehendes Depot wirklich zu verstehen. PortFlow erklärt dir jede Kennzahl in Klartext.'},
+};
+function onbSelect(group, btn, value){
+  document.querySelectorAll('#onb-'+group+'-options .onb-option').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  if(group==='goal'){ window.__onbGoal = value; document.getElementById('onb-next-1').disabled = false; }
+  if(group==='style'){ window.__onbStyle = value; document.getElementById('onb-next-2').disabled = false; }
+}
+function onbNext(step){
+  document.getElementById('onb-step-1').classList.add('hidden');
+  document.getElementById('onb-step-2').classList.remove('hidden');
+  document.getElementById('onb-seg-1').classList.add('done');
+}
+function onbBack(step){
+  document.getElementById('onb-step-2').classList.add('hidden');
+  document.getElementById('onb-step-1').classList.remove('hidden');
+  document.getElementById('onb-seg-1').classList.remove('done');
+}
+function onbShowProfile(){
+  document.getElementById('onb-step-2').classList.add('hidden');
+  document.getElementById('onb-step-3').classList.remove('hidden');
+  document.getElementById('onb-seg-2').classList.add('done');
+  document.getElementById('onb-seg-3').classList.add('done');
+  const profile = ONB_INVESTOR_PROFILES[window.__onbGoal] || ONB_INVESTOR_PROFILES['Vermögensaufbau'];
+  document.getElementById('onb-profile-badge').textContent = profile.badge;
+  document.getElementById('onb-profile-name').textContent = profile.name;
+  document.getElementById('onb-profile-desc').textContent = profile.desc;
+}
+function onbFinish(){
+  investmentGoal = window.__onbGoal || investmentGoal;
+  investmentStyle = window.__onbStyle || investmentStyle;
+  persistProfile();
+  localStorage.setItem('cp3_onboarded', '1');
+  document.getElementById('onb-overlay').classList.add('hidden');
+  renderCoachProfileSummary();
+}
+function maybeShowOnboarding(){
+  if(localStorage.getItem('cp3_onboarded')) return;
+  document.getElementById('onb-overlay').classList.remove('hidden');
+  document.querySelectorAll('#onb-goal-options .onb-option').forEach(b=>b.addEventListener('click', ()=>onbSelect('goal', b, b.dataset.goal)));
+  document.querySelectorAll('#onb-style-options .onb-option').forEach(b=>b.addEventListener('click', ()=>onbSelect('style', b, b.dataset.style)));
+}
 function computeRiskLevel(category, weightPct){
   let score = RISK_BASE[category] ?? 2;
   if(weightPct>30) score+=1;
@@ -1297,7 +1445,7 @@ function renderHealthScore(list){
       <div class="stat-box"><div class="l">Gesamt</div><div class="v">${health}/100</div></div>
     </div>
     <button class="btn btn-ghost btn-sm" onclick="explainWhy('risk')" style="margin-bottom:14px;">Warum hat sich mein Risiko verändert?</button>
-    <p style="font-size:13px; color:var(--text-dim); line-height:1.6;">Der Health Score kombiniert Diversifikation (40%), Risiko-Konzentration (30%) und Performance (30%). Ein hoher Wert bedeutet ein breit gestreutes Portfolio ohne grosse Klumpenrisiken bei solider Wertentwicklung.</p>`;
+    <p style="font-size:13px; color:var(--text-dim); line-height:1.6;">Der Investment Score kombiniert Diversifikation (40%), Risiko-Konzentration (30%) und Performance (30%). Ein hoher Wert bedeutet ein breit gestreutes Portfolio ohne grosse Klumpenrisiken bei solider Wertentwicklung.</p>`;
 }
 async function renderDailyInsight(list){
   const card = document.getElementById('insight-card');
@@ -2076,7 +2224,7 @@ function renderMore(){
   renderBrokerList();
   const ts = getLastRefreshTs();
   const lastText = ts ? new Date(ts).toLocaleString('de-CH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : 'noch nicht';
-  document.getElementById('last-refresh').textContent = investments.length ? `Kurse zuletzt aktualisiert: ${lastText} · Automatische Aktualisierung alle 15 Min. bei geöffneter App` : 'Alle Daten lokal gespeichert · Compound';
+  document.getElementById('last-refresh').textContent = investments.length ? `Kurse zuletzt aktualisiert: ${lastText} · Automatische Aktualisierung alle 15 Min. bei geöffneter App` : 'PortFlow · Alle Daten lokal gespeichert';
 }
 function renderAlertsOverview(){
   const el = document.getElementById('alerts-overview-list');
@@ -2536,7 +2684,7 @@ async function fetchAnthropicWithRetry(body, maxRetries){
   while(true){
     let res;
     try{
-      res = await fetch("https://api.anthropic.com/v1/messages", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
+      res = await fetch(CLAUDE_API_ENDPOINT, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
     }catch(networkErr){
       if(attempt<maxRetries){ attempt++; await sleep(500*attempt*attempt); continue; }
       throw new Error('Netzwerkfehler nach ' + (attempt+1) + ' Versuchen: ' + networkErr.message);
@@ -2756,7 +2904,7 @@ function createSnapshot(){
   grad.addColorStop(0,'#0c0e11'); grad.addColorStop(1,'#050608');
   ctx.fillStyle = grad; ctx.fillRect(0,0,w,h);
 
-  ctx.fillStyle = '#eceef1'; ctx.font = '700 42px Inter, sans-serif'; ctx.fillText('Compound', 70, 110);
+  ctx.fillStyle = '#eceef1'; ctx.font = '700 42px Inter, sans-serif'; ctx.fillText('PortFlow', 70, 110);
   ctx.fillStyle = '#767c87'; ctx.font = '500 26px Inter, sans-serif'; ctx.fillText('Portfolio-Snapshot · ' + new Date().toLocaleDateString('de-CH'), 70, 150);
 
   const list = allHoldings().filter(hh=>hh.qty>0);
@@ -2795,7 +2943,7 @@ function createSnapshot(){
     ctx.fillStyle = fillGrad; ctx.fill();
   }
 
-  ctx.fillStyle = '#3d4149'; ctx.font = '500 22px Inter, sans-serif'; ctx.fillText('Erstellt mit Compound', 70, h-60);
+  ctx.fillStyle = '#3d4149'; ctx.font = '500 22px Inter, sans-serif'; ctx.fillText('Erstellt mit PortFlow', 70, h-60);
 
   const dataUrl = canvas.toDataURL('image/png');
   document.getElementById('snapshot-img').src = dataUrl;
@@ -2821,6 +2969,7 @@ load();
 if(!portfolioHistory.length && investments.length){ snapshotHistory(); persist(); }
 window.__lastRefresh = null;
 renderHome();
+maybeShowOnboarding();
 const FIFTEEN_MIN = 15*60*1000;
 if((investments.length||watchlist.length) && (Date.now() - getLastRefreshTs() > FIFTEEN_MIN)){ refreshPrices(false); }
 setInterval(()=>{ if(investments.some(i=>computeHolding(i).qty>0) || watchlist.length) refreshPrices(false); }, FIFTEEN_MIN);
